@@ -12,7 +12,7 @@ def get_1sigma_threshold():
 
     np.random.seed(42)
 
-    wn = SIMULATION_CONFIG.create_newtork()
+    wn = SIMULATION_CONFIG.create_network()
     sim_ideal = wntr.sim.WNTRSimulator(wn)
     res_ideal = sim_ideal.run_sim()
     p_ideal = res_ideal.node['pressure']
@@ -20,7 +20,7 @@ def get_1sigma_threshold():
     all_residua = []
 
     for i in range(SIMULATION_CONFIG.scenarios.sigma3_sim_number):
-        wn_temp = SIMULATION_CONFIG.create_newtork() 
+        wn_temp = SIMULATION_CONFIG.create_network() 
         for name, node in wn_temp.nodes.junctions():
             #node.demand_timeseries_list[0].base_value *= np.random.uniform(0.95, 1.05)
             node.demand_timeseries_list[0].base_value *= np.random.uniform(1 - SIMULATION_CONFIG.scenarios.demand_noise_parameter, 1 + SIMULATION_CONFIG.scenarios.demand_noise_parameter)

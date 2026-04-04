@@ -21,8 +21,7 @@ from src.alter_demand_model import get_alt_demand_wn
 
 def stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h):
     
-    wn = SIMULATION_CONFIG.create_newtork()
-
+    wn = SIMULATION_CONFIG.create_network_real()
     sim = wntr.sim.WNTRSimulator(wn)
     #ref_sim = sim.run_sim()
     pipe_names = wn.pipe_name_list
@@ -35,7 +34,7 @@ def stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h):
             for time_of_failure_h in times_of_failure_h:
                 for pipe_to_fail in pipe_names:
                 
-                    wn_temp = SIMULATION_CONFIG.create_newtork()
+                    wn = SIMULATION_CONFIG.create_network_real()
                     
                     start_time_s = time_of_failure_h * 3600
                 
@@ -44,27 +43,24 @@ def stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h):
                     else:
                         end_time_s = SIMULATION_CONFIG.time.duration_s
                 
-                    pipe = wn_temp.get_link(pipe_to_fail)
+                    pipe = wn.get_link(pipe_to_fail)
                     leak_diameter = pipe.diameter * leak_diameter_parameter
                     leak_area = np.pi * (leak_diameter / 2)**2
                     
                     node_name = pipe_to_fail + '_leak_node'
-                    wn_temp = wntr.morph.split_pipe(wn_temp, pipe_to_fail, pipe_to_fail + '_A', node_name)
+                    wn = wntr.morph.split_pipe(wn, pipe_to_fail, pipe_to_fail + '_A', node_name)
                     
-                    leak_node = wn_temp.get_node(node_name) #new
+                    leak_node = wn.get_node(node_name) 
 
-                    wn_ref_local = copy.deepcopy(wn_temp)
+                    wn_base = SIMULATION_CONFIG.create_network_base()
+                    sim_base = wntr.sim.WNTRSimulator(wn_base)
+                    results_base = sim_base.run_sim()
 
-                    wn_ref_local = get_alt_demand_wn(wn_ref_local) 
-
-                    sim_ref = wntr.sim.WNTRSimulator(wn_ref_local)
-                    results_ref = sim_ref.run_sim()
-
-                    leak_node.add_leak(wn_temp, area=leak_area, start_time=start_time_s, end_time=end_time_s)
-                    sim_leak = wntr.sim.WNTRSimulator(wn_temp)
+                    leak_node.add_leak(wn, area=leak_area, start_time=start_time_s, end_time=end_time_s)
+                    sim_leak = wntr.sim.WNTRSimulator(wn)
                     results_leak = sim_leak.run_sim()
 
-                    residuals_matrix = results_ref.node['pressure'] - results_leak.node['press ure']
+                    residuals_matrix = results_base.node['pressure'] - results_leak.node['pressure']
                     
                     residuals_stacked = residuals_matrix.stack()
                     scenario_name = f'ldp{leak_diameter_parameter}_tofh{time_of_failure_h}_pl{pipe_to_fail}_scenario'
@@ -91,15 +87,15 @@ def stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h):
     # signal_final['time_of_failure_h'] = time_of_failure_h
 
     metadata_df = pd.DataFrame(scenario_metadata)
-    metadata_df.to_csv(SIMULATION_CONFIG.output_folder + '/csv/scenario_metadata.csv')
-    metadata_df.to_pickle(SIMULATION_CONFIG.output_folder + "/pickle/scenario_metadata.pkl")
+    metadata_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'scenario_metadata.csv')
+    metadata_df.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'scenario_metadata.pkl')
 
     
     return signal_final
  
 def run_single_leak(ldp, tofh, pipe_to_fail):
 
-    wn_temp = SIMULATION_CONFIG.create_newtork()
+    wn = SIMULATION_CONFIG.create_network_real()
     
     start_time_s = tofh * 3600
     if SIMULATION_CONFIG.time.leak_duration != 0:
@@ -107,34 +103,34 @@ def run_single_leak(ldp, tofh, pipe_to_fail):
     else:
         end_time_s = SIMULATION_CONFIG.time.duration_s
 
-    wn_temp.options.hydraulic.demand_model = 'PDD' 
+    wn.options.hydraulic.demand_model = 'PDD' 
 
     # Konfiguracja wycieku
-    pipe = wn_temp.get_link(pipe_to_fail)
+    pipe = wn.get_link(pipe_to_fail)
     leak_diameter = pipe.diameter * ldp
     leak_area = np.pi * (leak_diameter / 2)**2
     
     node_name = f"{pipe_to_fail}_leak_node"
-    wn_temp = wntr.morph.split_pipe(wn_temp, pipe_to_fail, pipe_to_fail + '_A', node_name)
-    
-    wn_ref = copy.deepcopy(wn_temp)
-    sim_ref = wntr.sim.WNTRSimulator(wn_ref)
-    results_ref = sim_ref.run_sim()
+    wn = wntr.morph.split_pipe(wn, pipe_to_fail, pipe_to_fail + '_A', node_name)
 
-    wn_temp = get_alt_demand_wn(wn_temp) 
+    wn_base = SIMULATION_CONFIG.create_network_base()
+    sim_base = wntr.sim.WNTRSimulator(wn_base)
+    results_base = sim_base.run_sim()
 
-    leak_node = wn_temp.get_node(node_name)
-    leak_node.add_leak(wn_temp, 
+    #wn = get_alt_demand_wn(wn) 
+
+    leak_node = wn.get_node(node_name)
+    leak_node.add_leak(wn, 
                        area=leak_area,
                        start_time=start_time_s,
                        end_time=end_time_s)
     
     
-    # sim = wntr.sim.WNTRSimulator(wn_temp)
-    sim_leak = wntr.sim.WNTRSimulator(wn_temp)
+    # sim = wntr.sim.WNTRSimulator(wn)
+    sim_leak = wntr.sim.WNTRSimulator(wn)
     results_leak = sim_leak.run_sim()
 
-    residuals_matrix = results_ref.node['pressure'] - results_leak.node['pressure']
+    residuals_matrix = results_base.node['pressure'] - results_leak.node['pressure']
         
     # Konwersja do "długiego formatu"
     res_df = residuals_matrix.stack().reset_index()
@@ -149,7 +145,7 @@ def run_single_leak(ldp, tofh, pipe_to_fail):
 
 def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_failure_h, n_jobs=-1):
     # 1. Symulacja referencyjna
-    wn = SIMULATION_CONFIG.create_newtork()
+    wn = SIMULATION_CONFIG.create_network_real()
     sim = wntr.sim.WNTRSimulator(wn)
     ref_sim = sim.run_sim()
     ref_pressure_matrix = ref_sim.node['pressure']
@@ -208,11 +204,6 @@ def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_fa
 
     #print(signal_final.columns.tolist())
 
-    # Usuwamy błędne przypisanie pojedynczych wartości na końcu tabeli, które było w starym kodzie
-    # signal_final['leak_diameter_parameter'] = ... (USUNIĘTE)
-
-    # Opcjonalnie: Zapis metadanych wewnątrz funkcji (tak jak w Twoim kodzie sekwencyjnym)
-    # Choć lepiej robić to na zewnątrz funkcji.
     metadata_df = pd.DataFrame(scenario_metadata)
     metadata_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'scenario_metadata.csv')
     metadata_df.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'scenario_metadata.pkl')

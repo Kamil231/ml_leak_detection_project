@@ -30,33 +30,33 @@ from pathlib import Path
 from tqdm_joblib import tqdm_joblib
     
 def run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters):
-    os.makedirs(SIMULATION_CONFIG.output_folder+'/pickle', exist_ok=True)   
-    os.makedirs(SIMULATION_CONFIG.output_folder+'/csv', exist_ok=True)    
+    os.makedirs(SIMULATION_CONFIG.output_folder / 'pickle', exist_ok=True)   
+    os.makedirs(SIMULATION_CONFIG.output_folder / 'csv', exist_ok=True)    
 
     chama_outputs = {}
     sensors_thp_dict = {}
 
-    #wn_local = SIMULATION_CONFIG.create_newtork()
+    #wn_local = SIMULATION_CONFIG.create_network_real()
 
     nodal_thresholds_dict = get_xsigma_threshold_dict(threshold_parameters)
     df_nodal_thresholds = pd.DataFrame(nodal_thresholds_dict)
-    df_nodal_thresholds.to_csv(SIMULATION_CONFIG.output_folder + '/csv/nodal_thresholds.csv')
-    df_nodal_thresholds.to_pickle(SIMULATION_CONFIG.output_folder + "/pickle/nodal_thresholds.pkl")
+    df_nodal_thresholds.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'nodal_thresholds.csv')
+    df_nodal_thresholds.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'nodal_thresholds.pkl')
 
     signal = stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h)  
     #signal = stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_failure_h) 
     #signal_input = signal.drop(columns=['leak_diameter_parameter', 'time_of_failure_h']).copy() 
     signal_input = signal.copy()
-    signal.to_csv(SIMULATION_CONFIG.output_folder + '/csv/signals_s.csv')
-    signal.to_pickle(SIMULATION_CONFIG.output_folder + "/pickle/signals.pkl")
+    signal.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_s.csv')
+    signal.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
 
     print(f"Signal shape: {signal_input.shape}")
 
     for sensor_budget in tqdm(SIMULATION_CONFIG.scenarios.sensor_budget):
 
-        wn_local = SIMULATION_CONFIG.create_newtork()
+        wn_local = SIMULATION_CONFIG.create_network_real()
         results_ImpactFormulation, sensors_thp_dict = sensors_ImpactFormulation.get_sensor_locations(wn_local, signal_input, threshold_parameters, sensor_budget)
-        wn_local = SIMULATION_CONFIG.create_newtork()
+        wn_local = SIMULATION_CONFIG.create_network_real()
         results_CoverageFormulation, sensors_thp_dict = sensors_CoverageFormulation.get_sensor_locations(wn_local, signal_input, threshold_parameters, sensor_budget)
         
         chama_outputs[sensor_budget] = (results_ImpactFormulation, results_CoverageFormulation)
@@ -79,10 +79,10 @@ def run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_param
     chama_outputs = pd.DataFrame(chama_outputs_temp_list)
 
 
-    with open(SIMULATION_CONFIG.output_folder + "/pickle/chama_outputs_s.pkl", 'wb') as f:
+    with open(SIMULATION_CONFIG.output_folder / 'pickle' / 'chama_outputs_s.pkl', 'wb') as f:
         pickle.dump(chama_outputs, f)
 
-    with open(SIMULATION_CONFIG.output_folder + "/pickle/sensors_thp_dict_s.pkl", 'wb') as f:
+    with open(SIMULATION_CONFIG.output_folder / 'pickle' / 'sensors_thp_dict_s.pkl', 'wb') as f:
         pickle.dump(sensors_thp_dict, f)
 
     print("Simulation ended.")
@@ -94,7 +94,7 @@ def run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, thresh
     pickle_path.mkdir(parents=True, exist_ok=True)
     csv_path.mkdir(parents=True, exist_ok=True)
 
-    wn_local = SIMULATION_CONFIG.create_newtork()
+    wn_local = SIMULATION_CONFIG.create_network_real()
     nodal_thresholds_dict = get_xsigma_threshold_dict(threshold_parameters)
     pd.DataFrame(nodal_thresholds_dict).to_csv(csv_path / "nodal_thresholds.csv")
 
@@ -103,7 +103,7 @@ def run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, thresh
     #signal_input = signal.drop(columns=['leak_diameter_parameter', 'time_of_failure_h']).copy()
     signal_input = signal.copy()
     signal.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_p.csv')
-    signal.to_pickle(SIMULATION_CONFIG.output_folder / "pickle" / "signals.pkl")
+    signal.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
 
     print(f"Signal shape: {signal_input.shape}")
     if signal_input.empty:
@@ -113,7 +113,7 @@ def run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, thresh
     def optimize_for_budget(n):
         #import warnings
         warnings.filterwarnings("ignore")
-        wn_local = SIMULATION_CONFIG.create_newtork()
+        wn_local = SIMULATION_CONFIG.create_network_real()
         res_impact, s_dict_i = sensors_ImpactFormulation.get_sensor_locations(
             wn_local, signal_input, threshold_parameters, n
         )

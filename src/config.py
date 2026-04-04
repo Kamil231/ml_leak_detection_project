@@ -2,6 +2,8 @@ import wntr
 from dataclasses import dataclass, field
 from typing import List
 from pathlib import Path
+import copy
+from src.alter_demand_model import get_alt_demand_wn
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = BASE_DIR / 'output_folder'
@@ -26,8 +28,7 @@ class WaterNetworkParameters:
 
 @dataclass
 class ScenariosParameters:
-    demand_noise_parameter: float
-    sensor_noise_parameter: float
+    noise_parameter: float
     sigma3_sim_number: int
     sensor_budget: List[int] = field(default_factory=list)
     
@@ -38,7 +39,21 @@ class SimulationConfig:
     network: WaterNetworkParameters
     scenarios: ScenariosParameters
     
-    def create_newtork(self)-> wntr.network.WaterNetworkModel:
+    def create_network_real(self)-> wntr.network.WaterNetworkModel:
+        
+        wn = wntr.network.WaterNetworkModel(self.network.inp_file_path)
+        wn.options.time.duration = self.time.duration_s
+        wn.options.time.hydraulic_timestep = self.time.hydraulic_timestep_s
+        wn.options.time.report_timestep = self.time.report_timestep_s
+        wn.options.hydraulic.required_pressure = self.network.required_pressure_m
+        wn.options.hydraulic.minimum_pressure = self.network.minimum_pressure_m
+        wn.options.hydraulic.demand_model = self.network.demand_model  
+
+        wn = get_alt_demand_wn(wn)
+        
+        return wn
+
+    def create_network_base(self)-> wntr.network.WaterNetworkModel:
         
         wn = wntr.network.WaterNetworkModel(self.network.inp_file_path)
         wn.options.time.duration = self.time.duration_s
@@ -50,6 +65,7 @@ class SimulationConfig:
         
         return wn
 
+
 SIMULATION_CONFIG = SimulationConfig(
     #output_folder = 'output_folder',
     output_folder = OUTPUT_DIR,
@@ -60,15 +76,14 @@ SIMULATION_CONFIG = SimulationConfig(
         leak_duration = 0 #3.0 # if leak_duration = 0, leak is presesnt until the end of simulation
     ),
     network=WaterNetworkParameters(
-        inp_file_path = "data/Net3.inp",
+        inp_file_path = BASE_DIR / 'data' / 'Net3.inp',
         required_pressure_m = 15.0,
         minimum_pressure_m = 0,
         pipe_diameter_m = 0.9144,
         demand_model = "PDD"
     ),
     scenarios=ScenariosParameters(
-        demand_noise_parameter = .005,
-        sensor_noise_parameter = .033,
+        noise_parameter = 2,
         sigma3_sim_number = 30,
         #sensor_budget = list(range(1,16)) # + list(range(10, 160, 1))
         sensor_budget = list(range(1,11)) # + list(range(10, 160, 1))

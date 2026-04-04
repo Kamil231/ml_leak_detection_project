@@ -42,7 +42,7 @@ formulation = chama_outputs['Formulation'].unique().tolist()
 
 st.set_page_config(layout="wide")
 
-wn = SIMULATION_CONFIG.create_newtork()
+wn = SIMULATION_CONFIG.create_network_real()
 
 with st.container(border=True):
 

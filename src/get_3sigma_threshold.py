@@ -3,36 +3,55 @@ import wntr
 import pandas as pd
 from src.config import SIMULATION_CONFIG
 from tqdm import tqdm
+import copy
+
 
 def get_1sigma_threshold():
 
     np.random.seed(42)
 
-    wn = SIMULATION_CONFIG.create_newtork()
-    sim_ideal = wntr.sim.WNTRSimulator(wn)
-    res_ideal = sim_ideal.run_sim()
-    p_ideal = res_ideal.node['pressure']
+    wn = SIMULATION_CONFIG.create_network_real()
+    sim = wntr.sim.WNTRSimulator(wn)
+    results = sim.run_sim()
+    all_residua = pd.DataFrame()
 
-    all_residua = []
+    p_noisy = copy.deepcopy(results.node['pressure'])
 
-    for i in range(SIMULATION_CONFIG.scenarios.sigma3_sim_number):
-        wn_temp = SIMULATION_CONFIG.create_newtork() 
-        for name, node in wn_temp.nodes.junctions():
-            #node.demand_timeseries_list[0].base_value *= np.random.uniform(0.95, 1.05)
-            node.demand_timeseries_list[0].base_value *= np.random.uniform(1 - SIMULATION_CONFIG.scenarios.demand_noise_parameter, 1 + SIMULATION_CONFIG.scenarios.demand_noise_parameter)
-            
+    for i in range(SIMULATION_CONFIG.scenarios.sigma3_sim_number):            
         try:
-            res = wntr.sim.WNTRSimulator(wn_temp).run_sim()
-            p_noisy = res.node['pressure']
-            sensor_noise = np.random.normal(0, SIMULATION_CONFIG.scenarios.sensor_noise_parameter, size=p_noisy.shape) 
-            p_noisy_with_sensor = p_noisy + sensor_noise
-            all_residua.append((p_noisy_with_sensor - p_ideal))
+            sensor_noise = np.random.normal(0, SIMULATION_CONFIG.scenarios.noise_parameter, size=p_noisy.shape) 
+            p_noisy = p_noisy + sensor_noise
         except Exception as e:
             print(f"Błąd symulacji w kroku {i}: {e}")
             continue
 
-    full_res_df = pd.concat(all_residua)
-    thresholds = full_res_df.std()
+    wn_base = SIMULATION_CONFIG.create_network_base()
+    sim_base = wntr.sim.WNTRSimulator(wn_base)
+    results_base = sim_base.run_sim()
+    p_base = results_base.node['pressure']
+
+    all_residua = p_noisy - p_base
+
+    print('all_residua:')
+    print(all_residua)
+
+    print('type(all_residua)')
+    print(type(all_residua))
+
+    print('all_residua.shape')
+    print(all_residua.shape)
+    
+
+    thresholds = all_residua.std()
+
+    print('thresholds:')
+    print(thresholds)
+
+    print('type(thresholds)')
+    print(type(thresholds))
+
+    print('thresholds.shape')
+    print(thresholds.shape)
 
     return thresholds
 
@@ -64,7 +83,7 @@ def get_detectability_matrix(wn, threshold_parameter):
     detectability_matrix = pd.DataFrame(index=wn.junction_name_list, columns=wn.junction_name_list)
 
     for leak_node in wn.junction_name_list:
-        wn_leak = SIMULATION_CONFIG.create_newtork()
+        wn_leak = SIMULATION_CONFIG.create_network_real()
         node = wn_leak.get_node(leak_node)
         node.add_leak(wn_leak, area=0.02, start_time=3600)
         
