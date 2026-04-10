@@ -10,8 +10,6 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-#from src.config import SIMULATION_CONFIG
-
 def generate_random_coeff_list(n, seed):
     
     np.random.seed(seed)
@@ -86,57 +84,7 @@ def get_alt_demand_wn(wn):
         
     return wn
 
-# def get_wns():
 
-#     wn = SIMULATION_CONFIG.create_network_real()
-    
-#     wn_original = copy.deepcopy(wn) 
-    
-#     wn_altered = get_alt_demand_wn(wn) 
-    
-#     return wn_original, wn_altered
-
-# def plot_wns(wn_original, wn_altered):
-    
-#     sim_mod = wntr.sim.WNTRSimulator(wn_altered)
-#     results_mod = sim_mod.run_sim()
-#     demand_mod = results_mod.node['demand']
-    
-#     sim_org = wntr.sim.WNTRSimulator(wn_original)
-#     results_org = sim_org.run_sim()
-#     demand_org = results_org.node['demand']
-    
-#     if not demand_mod.index.equals(demand_org.index):
-#         demand_org = demand_org.reindex(demand_mod.index)
-    
-#     node_name_list = wn_original.node_name_list
-#     nodes_str = [x for x in node_name_list if x.isdigit()]
-    
-#     for i, node_id in enumerate(nodes_str):
-#         df_plot = pd.DataFrame(index=demand_mod.index)
-        
-#         df_plot['Modified'] = demand_mod[node_id]
-#         df_plot['Original'] = demand_org[node_id]
-        
-#         df_plot.set_axis(df_plot.index / 3600).plot(xlabel="hrs", title=f"Node: {node_id}")
-#         plt.show()
-        
-  
-'''wn_original, wn_altered = get_wns()
-plot_wns(copy.deepcopy(wn_original), copy.deepcopy(wn_altered))
-
-
-sim_mod = wntr.sim.WNTRSimulator(wn_altered)
-results_mod = sim_mod.run_sim()
-demand_mod = results_mod.node['demand']
-
-sim_org = wntr.sim.WNTRSimulator(wn_original)
-results_org = sim_org.run_sim()
-demand_org = results_org.node['demand']
-df_plot = pd.DataFrame(index=demand_mod.index)
-
-df_plot['Modified'] = demand_mod['185']
-df_plot['Original'] = demand_org['185']'''
 
 
 

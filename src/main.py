@@ -66,13 +66,13 @@ times_of_failure_h = [8]'''
 # #run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
 # run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
 
-threshold_parameters = [1, 2]
-leak_diameter_parameters = [0.1, 0.6]
-times_of_failure_h = [0, 8]
-print('threshold_parameters: ', len(threshold_parameters))
-print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))
-#run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
-run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# threshold_parameters = [1, 2]
+# leak_diameter_parameters = [0.1, 0.6]
+# times_of_failure_h = [0, 8]
+# print('threshold_parameters: ', len(threshold_parameters))
+# print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))
+# #run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
 
 # threshold_parameters = [1, 2]
 # leak_diameter_parameters = [0.05, 0.1, 0.6]
@@ -90,16 +90,16 @@ run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_
 # #run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
 # run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
 
-# threshold_parameters = [1, 1.5, 2, 2.5, 3]
-# leak_diameter_parameters = [0.05, 0.75, 0.1, 0.125, 0.15, 0.2, 0.4, 0.6]
-# times_of_failure_h = [0, 8, 16]
-# print('threshold_parameters: ', len(threshold_parameters))
-# print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))
-# print(threshold_parameters)
-# print(leak_diameter_parameters)
-# print(times_of_failure_h)
-# #run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
-# run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+threshold_parameters = [1, 1.5, 2, 2.5, 3]
+leak_diameter_parameters = [0.05, 0.75, 0.1, 0.125, 0.15, 0.2, 0.4, 0.6]
+times_of_failure_h = [0, 8, 16]
+print('threshold_parameters: ', len(threshold_parameters))
+print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))
+print(threshold_parameters)
+print(leak_diameter_parameters)
+print(times_of_failure_h)
+#run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
 
 # #Big Dataset
 #threshold_parameters = [1, 1.5, 2, 2.5, 3]

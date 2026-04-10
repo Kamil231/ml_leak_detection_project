@@ -30,12 +30,25 @@ def load_data_signals():
     return df
 
 @st.cache_data 
-def load_data_thresholds():
-    df = pd.read_pickle(pickle_path + 'nodal_thresholds.pkl')   
-    return df
+def load_simulation_results():
+
+    wn_base = SIMULATION_CONFIG.create_network_base()
+    wn_real = SIMULATION_CONFIG.create_network_real()
+    
+    # 1. Przeprowadzenie symulacji
+    sim_real = wntr.sim.WNTRSimulator(wn_real)
+    results_real = sim_real.run_sim()
+    
+    sim_base = wntr.sim.WNTRSimulator(wn_base)
+    results_base = sim_base.run_sim()
+
+    node_name_list = wn_base.node_name_list
+
+    return results_real, results_base, node_name_list
 
 df_signals = load_data_signals()
-df_thresholds = load_data_thresholds()
+
+results_real, results_base, node_name_list = load_simulation_results()
 
 budget_list = chama_outputs['Budget'].unique().tolist()
 formulation = chama_outputs['Formulation'].unique().tolist()
@@ -87,10 +100,6 @@ with st.container(border=True):
             for sensor in impact_row_dict['Sensors']:
                 sensor_results_wn.append(sensors_wn_dict[sensor])
 
-            #for name in wn.node_name_list:
-                #print(name)
-            #print(sensor_results_wn)
-
             node_colors = {name: 'red' if name in sensor_results_wn else 'lightgrey' for name in wn.node_name_list}
             wntr.graphics.plot_network(
                 wn, 
@@ -136,10 +145,6 @@ with st.container(border=True):
             sensor_results_wn = []
             for sensor in coverage_row_dict['Sensors']:
                 sensor_results_wn.append(sensors_wn_dict[sensor])
-
-            # for name in wn.node_name_list:
-            #     print(name)
-            # print(sensor_results_wn)
 
             node_colors = {name: 'red' if name in sensor_results_wn else 'lightgrey' for name in wn.node_name_list}
             wntr.graphics.plot_network(
@@ -194,7 +199,7 @@ with st.container(border=True):
         
         if not impact_row.empty:
             impact_res = impact_row['Result'].item()
-            impact_objective_list.append(impact_res['Objective'])
+            impact_objective_list.append(impact_res['Objective']/3600)
             impact_FractionDetected_list.append(impact_res['FractionDetected'])
         
         if not coverage_row.empty:
@@ -304,7 +309,9 @@ with st.container(border=True):
         leak_options_sig = sorted(scenario_metadata['leak_diameter_parameter'].unique())
         #time_options_sig = sorted(df_signals['time_of_failure_h'].unique())
         time_options_sig = sorted(scenario_metadata['time_of_failure_h'].unique())
-        threshold_col_options = sorted(df_thresholds.columns)
+        #threshold_col_options = sorted(df_thresholds.columns)
+        threshold_col_options = [1, 1.5, 2, 2.5, 3]
+
         
         exclude = ['T', 'Node', 'leak_diameter_parameter', 'time_of_failure_h']
         scenario_cols = [col for col in df_signals.columns if col not in exclude]
@@ -315,9 +322,6 @@ with st.container(border=True):
 
         scenarios_picked = scenario_metadata[(scenario_metadata['leak_diameter_parameter'] == selected_leak_sig) & (scenario_metadata['time_of_failure_h'] == selected_time_sig)]
         scenarios_picked = scenarios_picked['Scenario_Name'].tolist()
-        #print('scenario_metadata: ', scenario_metadata)
-        #scenarios_picked = ['T', 'Node'] + scenarios_picked
-
         scenario_node_dict = dict(zip(scenario_metadata['Scenario_Name'], scenario_metadata['leak_location']))
 
         if not view_mode:
@@ -340,15 +344,19 @@ with st.container(border=True):
             if not filtered_signals.empty:
                 for col in scenarios_picked:
                     fig_sig.add_trace(go.Scatter(
-                        x=filtered_signals['T'], y=filtered_signals[col],
+                        x=filtered_signals['T']/3600, y=filtered_signals[col],
                         mode='lines', name=scenario_node_dict[col], line=dict(width=1.5)
                     ))
-
                 try:
-                    val = df_thresholds.loc[selected_node, selected_thresh_param]
-                    fig_sig.add_hline(y=val, line_dash="dash", line_color="red", annotation_text="Th +")
-                    fig_sig.add_hline(y=-val, line_dash="dash", line_color="red", annotation_text="Th -")
-                except: pass
+                    val = filtered_signals[scenarios_picked].iloc[0].std() * selected_thresh_param
+                    val = filtered_signals[scenarios_picked].stack().std() * selected_thresh_param
+                    mean = filtered_signals[scenarios_picked].stack().mean()
+                    fig_sig.add_hline(y=mean+val, line_dash="dash", line_color="red", annotation_text="Th +")
+                    fig_sig.add_hline(y=mean-val, line_dash="dash", line_color="red", annotation_text="Th -")
+                    fig_sig.add_hline(y=mean, line_dash="dash", line_color="blue", annotation_text="Th -")
+                except Exception as e:
+                    print(f"Wystąpił błąd: {e}") 
+                    #pass
         else:
             # TRYB 2: Jeden scenariusz -> wiele węzłów
 
@@ -359,13 +367,18 @@ with st.container(border=True):
             if not filtered_mode2.empty:
                 for node_name, group in filtered_mode2.groupby('Node'):
                     fig_sig.add_trace(go.Scatter(
-                        x=group['T'], y=group[selected_scenario],
+                        x=group['T']/3600, y=group[selected_scenario],
                         mode='lines', name=f"Node: {node_name}", line=dict(width=1)
                     ))
 
+        fig_sig.add_vline(
+            x=selected_time_sig, line_dash="dot", line_color="green", 
+            line_width=2, annotation_text=f"Awaria: {selected_time_sig}h", annotation_position="top left"
+        )
+
         fig_sig.update_layout(
             height=600, template="plotly_white",
-            xaxis_title="Czas [T]", yaxis_title="Wartość Sygnału",
+            xaxis_title="Czas [h]", yaxis_title="Wartość Sygnału",
             hovermode="closest", margin=dict(t=30, b=50, r=150),
             legend=dict(orientation="v", yanchor="top", y=1, xanchor="left", x=1.02)
         )
@@ -375,3 +388,79 @@ with st.container(border=True):
             st.plotly_chart(fig_sig, use_container_width=True)
         else:
             st.warning("Brak danych dla wybranych parametrów.")
+
+with st.container(border=True):
+
+    st.markdown(
+        "<h2 style='text-align: center;'>Analiza parametrów węzłów</h2>", 
+        unsafe_allow_html=True
+    )
+
+    nodes_str = [x for x in node_name_list if x.isdigit()]
+
+    # 2. Układ: Dwa dropdowny po lewej, Wykres po prawej
+    col1, col2 = st.columns([1, 4])
+
+    with col1:
+        st.write("### Ustawienia")
+        
+        # Wybór węzła
+        selected_node = st.selectbox(
+            "Wybierz Węzeł", 
+            options=nodes_str,
+            key="node_selector"
+        )
+        
+        # Wybór parametru
+        selected_param = st.selectbox(
+            "Wybierz parametr:",
+            options=["demand", "pressure"],
+            format_func=lambda x: "Demand" if x == "demand" else "Pressure",
+            key="param_selector"
+        )
+
+    with col2:
+        # Pobranie odpowiednich danych na podstawie wyboru
+        data_real = results_real.node[selected_param]
+        data_base = results_base.node[selected_param]
+        
+        if not data_real.index.equals(data_base.index):
+            data_base = data_base.reindex(data_real.index)
+
+        # Przygotowanie osi czasu
+        x_axis = data_real.index / 3600
+        y_mod = data_real[selected_node]
+        y_orig = data_base[selected_node]
+
+        # 3. Tworzenie interaktywnego wykresu Plotly
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(
+            x=x_axis, 
+            y=y_mod,
+            mode='lines',
+            name=f'Modified ({selected_param})',
+            line=dict(color='#EF553B', width=2)
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=x_axis, 
+            y=y_orig,
+            mode='lines',
+            name=f'Original ({selected_param})',
+            line=dict(color='#636EFA', width=2, dash='dash')
+        ))
+
+        # Konfiguracja wyglądu
+        unit = " [m]" if selected_param == "pressure" else "" # Prosty dodatek jednostki
+        fig.update_layout(
+            title=f"Węzeł {selected_node}: {selected_param.capitalize()}",
+            xaxis_title="Czas [h]",
+            yaxis_title=f"{selected_param.capitalize()}{unit}",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            margin=dict(l=20, r=20, t=60, b=20),
+            hovermode="x unified",
+            template="plotly_white"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
