@@ -22,12 +22,12 @@ import warnings
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from src.get_3sigma_threshold import get_xsigma_threshold_dict
 import pprint
 import pickle
 from joblib import Parallel, delayed
 from pathlib import Path
 from tqdm_joblib import tqdm_joblib
+from src.get_3sigma_threshold import get_1sigma_threshold
     
 def run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters):
     os.makedirs(SIMULATION_CONFIG.output_folder / 'pickle', exist_ok=True)   
@@ -38,8 +38,8 @@ def run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_param
 
     #wn_local = SIMULATION_CONFIG.create_network_real()
 
-    nodal_thresholds_dict = get_xsigma_threshold_dict(threshold_parameters)
-    df_nodal_thresholds = pd.DataFrame(nodal_thresholds_dict)
+    # nodal_thresholds_dict = get_xsigma_threshold_dict(threshold_parameters)
+    # df_nodal_thresholds = pd.DataFrame(nodal_thresholds_dict)
     df_nodal_thresholds.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'nodal_thresholds.csv')
     df_nodal_thresholds.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'nodal_thresholds.pkl')
 
@@ -95,8 +95,8 @@ def run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, thresh
     csv_path.mkdir(parents=True, exist_ok=True)
 
     wn_local = SIMULATION_CONFIG.create_network_real()
-    nodal_thresholds_dict = get_xsigma_threshold_dict(threshold_parameters)
-    pd.DataFrame(nodal_thresholds_dict).to_csv(csv_path / "nodal_thresholds.csv")
+    # nodal_thresholds_dict = get_xsigma_threshold_dict(threshold_parameters)
+    # pd.DataFrame(nodal_thresholds_dict).to_csv(csv_path / "nodal_thresholds.csv")
 
     print("--- Generating signals ---")
     signal = stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_failure_h)

@@ -76,21 +76,36 @@ def stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h):
 
                     pbar.update(1)
 
-                        
-                            
+    # wn_base = SIMULATION_CONFIG.create_network_base()
+    # sim_base = wntr.sim.WNTRSimulator(wn_base)
+    # results_base = sim_base.run_sim()
+
+    # wn = SIMULATION_CONFIG.create_network_real()
+    # sim_real = wntr.sim.WNTRSimulator(wn)
+    # results_real = sim_real.run_sim()
+
+    # residuals_matrix = results_base.node['pressure'] - results_real.node['pressure']                    
+    # residuals_stacked = residuals_matrix.stack()
+    # scenario_name = f'blueprint_scenario'
+    # residuals_stacked.name = scenario_name
+    # dfs_list.append(residuals_stacked)  
+    # scenario_metadata.append({
+    #                     'Scenario_Name': scenario_name,
+    #                     'leak_diameter_parameter': 0,
+    #                     'time_of_failure_h': 0,
+    #                     'leak_location': 'blueprint'
+    #                 })
+
+
     signal_final = pd.concat(dfs_list, axis=1)
     
     signal_final = signal_final.reset_index()
     signal_final.rename(columns={'level_0': 'T', 'level_1': 'Node'}, inplace=True) 
-    
-    # signal_final['leak_diameter_parameter'] = leak_diameter_parameter
-    # signal_final['time_of_failure_h'] = time_of_failure_h
 
     metadata_df = pd.DataFrame(scenario_metadata)
     metadata_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'scenario_metadata.csv')
     metadata_df.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'scenario_metadata.pkl')
 
-    
     return signal_final
  
 def run_single_leak(ldp, tofh, pipe_to_fail):
@@ -172,6 +187,29 @@ def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_fa
         delayed(run_single_leak)(ldp, tofh, pipe) 
         for ldp, tofh, pipe in tqdm(tasks, desc="Parallel Leak Calculations")
     )
+
+
+    # wn_base = SIMULATION_CONFIG.create_network_base()
+    # sim_base = wntr.sim.WNTRSimulator(wn_base)
+    # results_base = sim_base.run_sim()
+
+    # wn = SIMULATION_CONFIG.create_network_real()
+    # sim_real = wntr.sim.WNTRSimulator(wn)
+    # results_real = sim_real.run_sim()
+
+    # residuals_matrix = results_base.node['pressure'] - results_real.node['pressure']
+        
+    # # Konwersja do "długiego formatu"
+    # res_df = residuals_matrix.stack().reset_index()
+    # res_df.columns = ['T', 'Node', 'Pressure_Residual']
+    
+    # # Dodanie metadanych
+    # res_df['leak_diameter_parameter'] = 0
+    # res_df['time_of_failure_h'] = 0
+    # res_df['leak_location'] = 'blueprint'
+    
+    # results_list.append(res_df)
+
 
     # 4. Łączenie wyników w jeden "długi" DataFrame
     results_list = [r for r in results_list if r is not None]

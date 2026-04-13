@@ -46,6 +46,29 @@ def load_simulation_results():
 
     return results_real, results_base, node_name_list
 
+@st.cache_data 
+def get_bluepring_signals():
+
+    wn_base = SIMULATION_CONFIG.create_network_base()
+    sim_base = wntr.sim.WNTRSimulator(wn_base)
+    results_base = sim_base.run_sim()
+
+    wn = SIMULATION_CONFIG.create_network_real()
+    sim_real = wntr.sim.WNTRSimulator(wn)
+    results_real = sim_real.run_sim()
+
+    residuals_matrix = results_base.node['pressure'] - results_real.node['pressure']                    
+    residuals_stacked = residuals_matrix.stack()
+    scenario_name = f'blueprint_scenario'
+    residuals_stacked.name = scenario_name
+
+    signal_final = residuals_stacked.reset_index()
+    signal_final.rename(columns={'level_0': 'T', 'level_1': 'Node'}, inplace=True) 
+
+    return signal_final
+
+bp_signals = get_bluepring_signals()
+
 df_signals = load_data_signals()
 
 results_real, results_base, node_name_list = load_simulation_results()
@@ -331,6 +354,7 @@ with st.container(border=True):
             selected_scenario = st.selectbox("Wybierz Scenariusz", scenarios_picked, key="sig_scenario_select")
 
     with col_plots_sig:
+        
         fig_sig = go.Figure()
 
         if not view_mode:
@@ -341,6 +365,10 @@ with st.container(border=True):
                 (filtered_signals['Node'] == selected_node) 
             ].sort_values('T')
 
+            bp_signals = get_bluepring_signals()
+
+            filtered_signals = pd.merge(filtered_signals, bp_signals, on=['T', 'Node'], how='left')
+
             if not filtered_signals.empty:
                 for col in scenarios_picked:
                     fig_sig.add_trace(go.Scatter(
@@ -348,12 +376,16 @@ with st.container(border=True):
                         mode='lines', name=scenario_node_dict[col], line=dict(width=1.5)
                     ))
                 try:
-                    val = filtered_signals[scenarios_picked].iloc[0].std() * selected_thresh_param
                     val = filtered_signals[scenarios_picked].stack().std() * selected_thresh_param
                     mean = filtered_signals[scenarios_picked].stack().mean()
                     fig_sig.add_hline(y=mean+val, line_dash="dash", line_color="red", annotation_text="Th +")
                     fig_sig.add_hline(y=mean-val, line_dash="dash", line_color="red", annotation_text="Th -")
                     fig_sig.add_hline(y=mean, line_dash="dash", line_color="blue", annotation_text="Th -")
+
+                    fig_sig.add_trace(go.Scatter(
+                        x=filtered_signals['T']/3600, y=filtered_signals['blueprint_scenario'],
+                        mode='lines', name='blueprint_scenario', line=dict(width=1.5)
+                    ))
                 except Exception as e:
                     print(f"Wystąpił błąd: {e}") 
                     #pass
