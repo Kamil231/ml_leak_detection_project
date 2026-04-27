@@ -7,9 +7,8 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import pandas as pd
 
-#pickle_path = '/Users/kamilzawitaj/Documents/Studia/PW OKNO - AiR/Praca Mgr/Code/Ex15/output_folder/pickle/'
 pickle_path = '/Users/kamilzawitaj/Documents/Studia/PW OKNO - AiR/Praca Mgr/code/leak_simulation/output_folder/pickle/'
-#Śpickle_path = '/Users/kamilzawitaj/Documents/Studia/PW OKNO - AiR/Praca Mgr/Code/Ex15/output_folder_big_data/pickle/'
+#pickle_path = '/Users/kamilzawitaj/Documents/Studia/PW OKNO - AiR/Praca Mgr/code/leak_simulation/outputs_archive/output_folder_2_big_data/pickle/'
 
 
 with open(pickle_path + 'chama_outputs.pkl', 'rb') as file:
@@ -26,7 +25,7 @@ with open(pickle_path + 'sensors_wn_dict.pkl', 'rb') as file:
 
 @st.cache_data 
 def load_data_signals():  
-    df = pd.read_pickle(pickle_path + 'signals.pkl')   
+    df = pd.read_pickle(pickle_path + 'signals_with_bp.pkl')   
     return df
 
 @st.cache_data 
@@ -35,7 +34,6 @@ def load_simulation_results():
     wn_base = SIMULATION_CONFIG.create_network_base()
     wn_real = SIMULATION_CONFIG.create_network_real()
     
-    # 1. Przeprowadzenie symulacji
     sim_real = wntr.sim.WNTRSimulator(wn_real)
     results_real = sim_real.run_sim()
     
@@ -46,28 +44,28 @@ def load_simulation_results():
 
     return results_real, results_base, node_name_list
 
-@st.cache_data 
-def get_bluepring_signals():
+# @st.cache_data 
+# def get_bluepring_signals():
 
-    wn_base = SIMULATION_CONFIG.create_network_base()
-    sim_base = wntr.sim.WNTRSimulator(wn_base)
-    results_base = sim_base.run_sim()
+#     wn_base = SIMULATION_CONFIG.create_network_base()
+#     sim_base = wntr.sim.WNTRSimulator(wn_base)
+#     results_base = sim_base.run_sim()
 
-    wn = SIMULATION_CONFIG.create_network_real()
-    sim_real = wntr.sim.WNTRSimulator(wn)
-    results_real = sim_real.run_sim()
+#     wn = SIMULATION_CONFIG.create_network_real()
+#     sim_real = wntr.sim.WNTRSimulator(wn)
+#     results_real = sim_real.run_sim()
 
-    residuals_matrix = results_base.node['pressure'] - results_real.node['pressure']                    
-    residuals_stacked = residuals_matrix.stack()
-    scenario_name = f'blueprint_scenario'
-    residuals_stacked.name = scenario_name
+#     residuals_matrix = results_base.node['pressure'] - results_real.node['pressure']                    
+#     residuals_stacked = residuals_matrix.stack()
+#     scenario_name = f'blueprint_scenario'
+#     residuals_stacked.name = scenario_name
 
-    signal_final = residuals_stacked.reset_index()
-    signal_final.rename(columns={'level_0': 'T', 'level_1': 'Node'}, inplace=True) 
+#     signal_final = residuals_stacked.reset_index()
+#     signal_final.rename(columns={'level_0': 'T', 'level_1': 'Node'}, inplace=True) 
 
-    return signal_final
+#     return signal_final
 
-bp_signals = get_bluepring_signals()
+#bp_signals = get_bluepring_signals()
 
 df_signals = load_data_signals()
 
@@ -341,7 +339,6 @@ with st.container(border=True):
 
         selected_leak_sig = st.selectbox("Leak Diameter", leak_options_sig, key="sig_leak_select")
         selected_time_sig = st.selectbox("Time of Failure (h)", time_options_sig, key="sig_time_select")
-        selected_thresh_param = st.selectbox("Parametr Threshold", threshold_col_options, key="sig_thresh_select")
 
         scenarios_picked = scenario_metadata[(scenario_metadata['leak_diameter_parameter'] == selected_leak_sig) & (scenario_metadata['time_of_failure_h'] == selected_time_sig)]
         scenarios_picked = scenarios_picked['Scenario_Name'].tolist()
@@ -350,14 +347,18 @@ with st.container(border=True):
         if not view_mode:
             node_options = sorted(df_signals['Node'].unique())
             selected_node = st.selectbox("Wybierz Węzeł", node_options, key="sig_node_select")
+            selected_thresh_param = st.selectbox("Parametr Threshold", threshold_col_options, key="sig_thresh_select")
         else:
             selected_scenario = st.selectbox("Wybierz Scenariusz", scenarios_picked, key="sig_scenario_select")
 
     with col_plots_sig:
-        
+
         fig_sig = go.Figure()
 
         if not view_mode:
+
+            scenarios_picked.append('blueprint_scenario')
+            scenario_node_dict['blueprint_scenario'] = 'blueprint_scenario'
 
             filtered_signals = df_signals[['T', 'Node'] + scenarios_picked].sort_values('T')
 
@@ -365,14 +366,15 @@ with st.container(border=True):
                 (filtered_signals['Node'] == selected_node) 
             ].sort_values('T')
 
-            bp_signals = get_bluepring_signals()
+            #bp_signals = get_bluepring_signals()
 
-            filtered_signals = pd.merge(filtered_signals, bp_signals, on=['T', 'Node'], how='left')
+            #filtered_signals = pd.merge(filtered_signals, bp_signals, on=['T', 'Node'], how='left')
+
 
             if not filtered_signals.empty:
                 for col in scenarios_picked:
                     fig_sig.add_trace(go.Scatter(
-                        x=filtered_signals['T']/3600, y=filtered_signals[col],
+                        x=filtered_signals['T'], y=filtered_signals[col],
                         mode='lines', name=scenario_node_dict[col], line=dict(width=1.5)
                     ))
                 try:
@@ -382,10 +384,6 @@ with st.container(border=True):
                     fig_sig.add_hline(y=mean-val, line_dash="dash", line_color="red", annotation_text="Th -")
                     fig_sig.add_hline(y=mean, line_dash="dash", line_color="blue", annotation_text="Th -")
 
-                    fig_sig.add_trace(go.Scatter(
-                        x=filtered_signals['T']/3600, y=filtered_signals['blueprint_scenario'],
-                        mode='lines', name='blueprint_scenario', line=dict(width=1.5)
-                    ))
                 except Exception as e:
                     print(f"Wystąpił błąd: {e}") 
                     #pass
@@ -399,7 +397,7 @@ with st.container(border=True):
             if not filtered_mode2.empty:
                 for node_name, group in filtered_mode2.groupby('Node'):
                     fig_sig.add_trace(go.Scatter(
-                        x=group['T']/3600, y=group[selected_scenario],
+                        x=group['T'], y=group[selected_scenario],
                         mode='lines', name=f"Node: {node_name}", line=dict(width=1)
                     ))
 
@@ -496,3 +494,95 @@ with st.container(border=True):
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
+
+with st.container(border=True):
+
+    # 3. Ekstrakcja danych do Plotly
+    
+    # Podział rur na zwykłe i wybraną (330)
+    edge_x_normal, edge_y_normal = [], []
+    edge_x_special, edge_y_special = [], []
+
+    for name, link in wn.links():
+        x0, y0 = wn.get_node(link.start_node_name).coordinates
+        x1, y1 = wn.get_node(link.end_node_name).coordinates
+        
+        # Sprawdzamy, czy to rura o nazwie 330
+        if str(name) == '330':
+            edge_x_special.extend([x0, x1, None])
+            edge_y_special.extend([y0, y1, None])
+        else:
+            edge_x_normal.extend([x0, x1, None])
+            edge_y_normal.extend([y0, y1, None])
+
+    # Grupowanie węzłów (standardowe)
+    node_groups = {}
+    for name, node in wn.nodes():
+        ntype = node.node_type
+        if ntype not in node_groups:
+            node_groups[ntype] = {'x': [], 'y': [], 'text': []}
+        
+        x, y = node.coordinates
+        node_groups[ntype]['x'].append(x)
+        node_groups[ntype]['y'].append(y)
+        node_groups[ntype]['text'].append(f"<b>Węzeł:</b> {name}<br><b>Typ:</b> {ntype}")
+
+    # 4. Tworzenie wykresu
+    fig = go.Figure()
+
+    # Rury ZWYKŁE (Szare)
+    fig.add_trace(go.Scatter(
+        x=edge_x_normal, y=edge_y_normal,
+        line=dict(width=1.5, color='#A0A0A0'),
+        hoverinfo='none',
+        mode='lines',
+        name='Pozostałe rury',
+        showlegend=True
+    ))
+
+    # Rura SPECJALNA (Zielona - "330")
+    if edge_x_special:
+        fig.add_trace(go.Scatter(
+            x=edge_x_special, y=edge_y_special,
+            line=dict(width=4, color='green'), # Grubsza i zielona
+            hoverinfo='all',
+            mode='lines',
+            name='Rura 330',
+            showlegend=True
+        ))
+
+    # Dodawanie warstw węzłów
+    for ntype, data in node_groups.items():
+        fig.add_trace(go.Scatter(
+            x=data['x'],
+            y=data['y'],
+            mode='markers',
+            name=ntype,
+            text=data['text'],
+            hoverinfo='text',
+            marker=dict(
+                size=10,
+                line=dict(width=1, color='white')
+            )
+        ))
+
+    # Estetyka mapy
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0),
+        showlegend=True,
+        hovermode='closest',
+        plot_bgcolor='white',
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(
+            showgrid=False, 
+            zeroline=False, 
+            showticklabels=False,
+            scaleanchor="x",
+            scaleratio=1,
+        ),
+        height=700
+    )
+
+    # 5. Wyświetlenie w Streamlit
+    st.plotly_chart(fig, use_container_width=True)

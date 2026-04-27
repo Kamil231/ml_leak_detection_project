@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings('ignore')
 warnings.filterwarnings("ignore", message="pkg_resources is deprecated")
 
-import numpy as np
+import numpy as np 
 import wntr
 import pandas as pd
 import matplotlib.pylab as plt
@@ -73,8 +73,13 @@ def get_sensor_locations(wn, signal, threshold_parameters, sensor_budget):
                                           sensor=sensor_characteristics,
                                           entity=entity_df)
 
+    valid_sensors = set(coverage_df['Sensor'])
+
     for sensor_group in grouped_sensors_list:
-        coverageform.add_grouping_constraint(sensor_group, max_select=1)
+        filtered_group = [s for s in sensor_group if s in valid_sensors]
+        if filtered_group:
+            coverageform.add_grouping_constraint(filtered_group, max_select=1)
+        #coverageform.add_grouping_constraint(sensor_group, max_select=1)
 
 
     coverageform.solve_pyomo_model(sensor_budget=sensor_budget)

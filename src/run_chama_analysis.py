@@ -27,8 +27,29 @@ import pickle
 from joblib import Parallel, delayed
 from pathlib import Path
 from tqdm_joblib import tqdm_joblib
-from src.get_3sigma_threshold import get_1sigma_threshold
-    
+import wntr
+#from src.get_3sigma_threshold import get_1sigma_threshold
+
+def get_blueprint_signals():
+
+    wn_base = SIMULATION_CONFIG.create_network_base()
+    sim_base = wntr.sim.WNTRSimulator(wn_base)
+    results_base = sim_base.run_sim()
+
+    wn = SIMULATION_CONFIG.create_network_real()
+    sim_real = wntr.sim.WNTRSimulator(wn)
+    results_real = sim_real.run_sim()
+
+    residuals_matrix = results_base.node['pressure'] - results_real.node['pressure']                    
+    residuals_stacked = residuals_matrix.stack()
+    scenario_name = f'blueprint_scenario'
+    residuals_stacked.name = scenario_name
+
+    signal_final = residuals_stacked.reset_index()
+    signal_final.rename(columns={'level_0': 'T', 'level_1': 'Node'}, inplace=True) 
+
+    return signal_final
+
 def run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters):
     os.makedirs(SIMULATION_CONFIG.output_folder / 'pickle', exist_ok=True)   
     os.makedirs(SIMULATION_CONFIG.output_folder / 'csv', exist_ok=True)    
@@ -40,17 +61,22 @@ def run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_param
 
     # nodal_thresholds_dict = get_xsigma_threshold_dict(threshold_parameters)
     # df_nodal_thresholds = pd.DataFrame(nodal_thresholds_dict)
-    df_nodal_thresholds.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'nodal_thresholds.csv')
-    df_nodal_thresholds.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'nodal_thresholds.pkl')
+    # df_nodal_thresholds.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'nodal_thresholds.csv')
+    # df_nodal_thresholds.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'nodal_thresholds.pkl')
 
     signal = stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h)  
     #signal = stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_failure_h) 
     #signal_input = signal.drop(columns=['leak_diameter_parameter', 'time_of_failure_h']).copy() 
     signal_input = signal.copy()
-    signal.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_s.csv')
-    signal.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
+
+    # bp_signals = get_blueprint_signals()
+    # df_combined = pd.merge(bp_signals, signal, on=['T', 'Node'], how='outer')
+
+    # df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_s.csv')
+    # df_combined.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
 
     print(f"Signal shape: {signal_input.shape}")
+    print("signal_input:\n", signal_input)
 
     for sensor_budget in tqdm(SIMULATION_CONFIG.scenarios.sensor_budget):
 
@@ -102,10 +128,16 @@ def run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, thresh
     signal = stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_failure_h)
     #signal_input = signal.drop(columns=['leak_diameter_parameter', 'time_of_failure_h']).copy()
     signal_input = signal.copy()
-    signal.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_p.csv')
-    signal.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
+
+    # bp_signals = get_blueprint_signals()
+    # df_combined = pd.merge(bp_signals, signal, on=['T', 'Node'], how='outer')
+
+    # df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_p.csv')
+    # df_combined.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
 
     print(f"Signal shape: {signal_input.shape}")
+    print("signal_input:\n",signal_input)
+
     if signal_input.empty:
         print("WARNING: signal_input is empty! Optimization will do nothing.")
         return

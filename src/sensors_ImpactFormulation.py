@@ -27,9 +27,6 @@ def get_sensor_locations(wn, signal, threshold_parameters, sensor_budget):
     scenario_names = [col for col in signal.columns if col not in ['T', 'Node']]
     sensor_names = wn.junction_name_list
     sample_times = np.arange(0, wn.options.time.duration, wn.options.time.hydraulic_timestep)
-    #thresholds_series = get_3sigma_threshold(threshold_parameter)
-
-
 
     thresholds_series = get_1sigma_threshold()
 
@@ -81,8 +78,14 @@ def get_sensor_locations(wn, signal, threshold_parameters, sensor_budget):
     impactform = chama.optimize.ImpactFormulation()
     model = impactform.create_pyomo_model(impact=min_det_time, sensor=sensor_characteristics, scenario=scenario_characteristics)
 
+    valid_sensors = set(min_det_time['Sensor'])
+
     for sensor_group in grouped_sensors_list:
-        impactform.add_grouping_constraint(sensor_group, max_select=1)
+        # print('sensor_group: ', sensor_group)
+        # impactform.add_grouping_constraint(sensor_group, max_select=1)
+        filtered_group = [s for s in sensor_group if s in valid_sensors]
+        if filtered_group:
+            impactform.add_grouping_constraint(filtered_group, max_select=1)
         
     impactform.solve_pyomo_model(sensor_budget=sensor_budget)
 
