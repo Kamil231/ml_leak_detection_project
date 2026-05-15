@@ -10,9 +10,9 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-def generate_random_coeff_list(n, seed):
+def generate_random_coeff_list(n, seed, seed_offset = 0):
     
-    np.random.seed(seed)
+    np.random.seed(seed + seed_offset)
 
     random_coeff_ranges = np.random.choice(
         [0, 1, 2], 
@@ -30,25 +30,29 @@ def generate_random_coeff_list(n, seed):
     
     return results
 
-def mix_timestamps(demand_node):
+def mix_timestamps(demand_node, seed_offset = 0):
     time = demand_node.index.tolist()
     try:
         delta_time = time[1] - time[0]
-    except:
-        print('cannot calcualte delta time')
+    except Exception as e:
+        print(f'Cannot calculate delta time: {e}')
+        return demand_node
         
     demand_node_temp = copy.deepcopy(demand_node)
      
-    max_shift = 3600 * 6 / delta_time
+    max_shift = int(3600 * 6 / delta_time)
+
+    n_elements = len(demand_node)
     
-    for i, d in enumerate(demand_node):
-        np.random.seed(i)
-        random_shift = np.random.randint(max_shift*(-1), max_shift+1)        
-        demand_node.iloc[i] = demand_node_temp.iloc[(i+random_shift)] 
+    for i in range(n_elements):
+        np.random.seed(i + seed_offset * 10000) # x 10000 zeby zierna sie nie nakladaly
+        random_shift = np.random.randint(max_shift*(-1), max_shift+1)
+        target_idx = max(0, min(i + random_shift, n_elements - 1))        
+        demand_node.iloc[i] = demand_node_temp.iloc[target_idx]
         
     return demand_node
 
-def get_alt_demand_wn(wn):
+def get_alt_demand_wn(wn, seed_offset = 0):
     
     sim = wntr.sim.WNTRSimulator(wn)
     results_real = sim.run_sim()
@@ -63,21 +67,23 @@ def get_alt_demand_wn(wn):
         node = wn.get_node(node_id)
         
         if node.node_type != 'Junction':
-            #print(f"ommiting junction {node_id} (type: {node.node_type})")
             continue
-        
-        coeff_list = generate_random_coeff_list(len(demand), nodes_int[i])        
-        demand_shifted = mix_timestamps(demand[node_id].copy())
+
+        coeff_list = generate_random_coeff_list(len(demand), nodes_int[i], seed_offset)        
+        demand_shifted = mix_timestamps(demand[node_id].copy(), seed_offset)
+
         new_demand_pattern = demand_shifted * coeff_list
         new_demand_pattern = new_demand_pattern.tolist()
         demand[node_id] = new_demand_pattern
         node = wn.get_node(node_id)
+
         try:
             wn.add_pattern(f'RealPattern_{node_id}', new_demand_pattern)
             del node.demand_timeseries_list[:]
             node.add_demand(base=1.0, pattern_name=f'RealPattern_{node_id}')
-        except:
-            print(f'failed to add: RealPattern_{node_id}')
+        except Exception as e:
+            print(f'{i}/{len(nodes_str)} failed to add: RealPattern_{node_id}')
+            print(f"Wystąpił błąd: {e}")
             continue
 
     wn.reset_initial_values() 

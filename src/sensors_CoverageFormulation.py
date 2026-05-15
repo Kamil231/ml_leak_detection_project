@@ -20,14 +20,14 @@ import os
 from src.get_3sigma_threshold import get_1sigma_threshold
 
 
-def get_sensor_locations(wn, signal, threshold_parameters, sensor_budget):
+def get_sensor_locations(wn, signal, threshold_parameters, thresholds_series, sensor_budget):
 
     #scenario_names = signal.columns.tolist()[2:]
     scenario_names = [col for col in signal.columns if col not in ['T', 'Node']]
     sensor_names = wn.junction_name_list
     sample_times = np.arange(0, wn.options.time.duration, wn.options.time.hydraulic_timestep)
 
-    thresholds_series = get_1sigma_threshold()
+    # thresholds_series = get_1sigma_threshold()
 
     sensors = {}
     sensors_thp_dict = {}

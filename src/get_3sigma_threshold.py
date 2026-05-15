@@ -4,51 +4,36 @@ import pandas as pd
 from src.config import SIMULATION_CONFIG
 from tqdm import tqdm
 
-def get_1sigma_threshold():
-
-    # np.random.seed(42)
-
-    # wn = SIMULATION_CONFIG.create_newtork()
-    # sim_ideal = wntr.sim.WNTRSimulator(wn)
-    # res_ideal = sim_ideal.run_sim()
-    # p_ideal = res_ideal.node['pressure']
-
-    # all_residua = []
-
-    # for i in range(SIMULATION_CONFIG.scenarios.sigma3_sim_number):
-    #     wn_temp = SIMULATION_CONFIG.create_newtork() 
-    #     for name, node in wn_temp.nodes.junctions():
-    #         #node.demand_timeseries_list[0].base_value *= np.random.uniform(0.95, 1.05)
-    #         node.demand_timeseries_list[0].base_value *= np.random.uniform(1 - SIMULATION_CONFIG.scenarios.demand_noise_parameter, 1 + SIMULATION_CONFIG.scenarios.demand_noise_parameter)
-            
-    #     try:
-    #         res = wntr.sim.WNTRSimulator(wn_temp).run_sim()
-    #         p_noisy = res.node['pressure']
-    #         sensor_noise = np.random.normal(0, SIMULATION_CONFIG.scenarios.sensor_noise_parameter, size=p_noisy.shape) 
-    #         p_noisy_with_sensor = p_noisy + sensor_noise
-    #         all_residua.append((p_noisy_with_sensor - p_ideal))
-    #     except Exception as e:
-    #         print(f"Błąd symulacji w kroku {i}: {e}")
-    #         continue
-
-    # full_res_df = pd.concat(all_residua)
-    # thresholds = full_res_df.std()
+def get_1sigma_threshold(num_runs=100):
 
     wn_base = SIMULATION_CONFIG.create_network_base()
     sim_base = wntr.sim.WNTRSimulator(wn_base)
     results_base = sim_base.run_sim()
+    base_pressure = results_base.node['pressure']
 
-    wn = SIMULATION_CONFIG.create_network_real()
-    sim_leak = wntr.sim.WNTRSimulator(wn)
-    results_leak = sim_leak.run_sim()
+    all_residuals = []
 
-    residuals_matrix = results_base.node['pressure'] - results_leak.node['pressure']
+    #usrednione przebiegi z rzeczywistykm demnad
+    for i in tqdm(range(num_runs), desc="Calculating thresholds: "):
 
-    thresholds = residuals_matrix.std()
+        wn_real = SIMULATION_CONFIG.create_network_real(seed_offset=i)
+        sim_real = wntr.sim.WNTRSimulator(wn_real)
+        results_real = sim_real.run_sim()
+
+        real_pressure = results_real.node['pressure']
+
+        residuals_matrix = base_pressure - real_pressure
+        all_residuals.append(residuals_matrix)
+
+    combined_residuals = pd.concat(all_residuals, ignore_index=True)
+    thresholds = combined_residuals.std()
+
+    thresholds.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'nodal_thresholds_std.pkl')
 
     return thresholds
 
-def get_xsigma_threshold_dict(threshold_parameters):
+
+'''def get_xsigma_threshold_dict(threshold_parameters):
 
     sigma = get_1sigma_threshold()
 
@@ -88,5 +73,5 @@ def get_detectability_matrix(wn, threshold_parameter):
         pressure_drop = pressure_base - pressure_leak
         detectability_matrix[leak_node] = (pressure_drop > thresholds).astype(int)
     
-    detectability_matrix.to_csv(SIMULATION_CONFIG.output_folder + '/detectability_matrix.csv')
+    detectability_matrix.to_csv(SIMULATION_CONFIG.output_folder + '/detectability_matrix.csv')'''
 

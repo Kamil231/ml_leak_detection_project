@@ -19,6 +19,7 @@ from collections import defaultdict
 import copy
 from src.alter_demand_model import get_alt_demand_wn
 import re
+from pprint import pprint
 
 def get_blueprint_signals():
 
@@ -40,80 +41,68 @@ def get_blueprint_signals():
 
     return signal_final
 
-def return_outlier_scenario(df_signals):
+def return_outlier_scenario(df_signals, tof_list):
 
-    limit_time = 16
-    df_subset = df_signals[df_signals['T'] <= limit_time]
+    max_tof = max(tof_list)
+    max_tof = max_tof - 1
 
-    scenario_cols = [
-        c for c in df_signals.columns 
-        if (match := re.search(r'tofh(\d+)', c)) and int(match.group(1)) <= 16
-    ]
-
-    errors_all = df_subset[scenario_cols].sub(df_subset['blueprint_scenario'], axis=0)
-
-    global_mean = errors_all.values.mean()
-    global_std = errors_all.values.std()
-
-    upper_limit = global_mean + 3 * global_std
-    lower_limit = global_mean - 3 * global_std
-
-    is_outlier = ((errors_all > upper_limit) | (errors_all < lower_limit)).any()
-    outlier_names = is_outlier[is_outlier == True].index.tolist()
-
-    if not outlier_names:
-        print("Nie znaleziono outlierów.")
+    if max_tof == 0:
         return None
-    else:
-        print("Wykryte outliery:")
-        print('\n'.join(outlier_names))
-        return outlier_names
 
-def return_outlier_nodes(df_signals):
-    limit_time = 16
-    df_subset = df_signals[df_signals['T'] <= limit_time]
-
-    scenario_cols = [
-        c for c in df_signals.columns 
-        if (match := re.search(r'tofh(\d+)', c)) and int(match.group(1)) <= 16
+    df_T_subset = df_signals[df_signals['T'] <= max_tof * 3600]
+    
+    scenarios = [
+        c for c in df_T_subset.columns 
+        if (match := re.search(r'tofh(\d+)', c)) and int(match.group(1)) >= max_tof
     ]
+    
+    
+    ldps = sorted(list(set(s.split('_')[0] for s in scenarios)))
+    tofhs = sorted(list(set(s.split('_')[1] for s in scenarios)))
+    nodes = df_T_subset['Node'].unique()
+    
+    grouped_data = defaultdict(lambda: defaultdict(list))
 
-    outlier_nodes_overall = set()
-    outliers_per_scenario = {}
+    for s in scenarios:
+        parts = s.split('_')
+        l_val = parts[0]
+        t_val = parts[1]
+        grouped_data[l_val][t_val].append(s)
+    
+    df_wide = df_T_subset.pivot(index='T', columns='Node', values=scenarios)
+    
+    outlier_scenarios = []
+    
+    for ldp in ldps:
+        for tofh in tofhs:
+            for node in nodes:
+                
+                filtered_scenarios = grouped_data[ldp][tofh]
+                
+                idx = pd.IndexSlice
 
-    for scenario in scenario_cols:
+                df_subset = df_wide.loc[:, idx[filtered_scenarios, node]]
+                
+                mean_course = df_subset.mean(axis=1)
+                
+                errors = df_subset.sub(mean_course, axis=0)
+                
+                global_mean = errors.values.mean().mean()
+                global_std = errors.values.std().mean()
+                
+                upper_limit = global_mean + 3 * global_std
+                lower_limit = global_mean - 3 * global_std
+                
+                is_outlier = (errors > upper_limit) | (errors < lower_limit)
+                outlier_mask = is_outlier.any(axis=0)
+                outlier_scenarios_and_nodes = outlier_mask[outlier_mask == True].index.tolist()
+                outlier_scenarios.append(outlier_scenarios_and_nodes)
+    
+    unique_outlier_scenarios = list(set([sublist[0][0] for sublist in outlier_scenarios if sublist]))
 
-        df_pivot = df_subset.pivot(index='T', columns='Node', values=scenario)
-        
-        mean_course = df_pivot.mean(axis=1)
-
-        errors = df_pivot.sub(mean_course, axis=0)
-        
-        global_mean = errors.values.mean()
-        global_std = errors.values.std()
-        
-        upper_limit = global_mean + 3 * global_std
-        lower_limit = global_mean - 3 * global_std
-        
-        is_outlier = (errors > upper_limit) | (errors < lower_limit)
-
-        outlier_nodes_in_this_scenario = is_outlier.columns[is_outlier.any(axis=0)].tolist()
-        
-        if outlier_nodes_in_this_scenario:
-            outliers_per_scenario[scenario] = outlier_nodes_in_this_scenario
-            outlier_nodes_overall.update(outlier_nodes_in_this_scenario)
-
-    if not outlier_nodes_overall:
-        print("Nie znaleziono outlierów.")
-        return None
-    else:
-        print("Wykryte Nody (outliery) z podziałem na scenariusze:")
-        for sc, nodes in outliers_per_scenario.items():
-            print(f" - {sc}: {nodes}")
-            
-        return list(outlier_nodes_overall)
-
-
+    print('unique_outlier_scenarios: ', unique_outlier_scenarios)
+    
+    return unique_outlier_scenarios
 
 def stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h):
     
@@ -179,39 +168,34 @@ def stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h):
 
     metadata_df = pd.DataFrame(scenario_metadata)
 
-    #signal_input = signal_final.copy()
-
     bp_signals = get_blueprint_signals()
     df_combined = pd.merge(bp_signals, signal_final, on=['T', 'Node'], how='outer')
+
 
     # df_combined['T'] = df_combined['T'] / 3600
     # signal_final['T'] = signal_final['T'] / 3600
 
-    # outlier_scenarios = return_outlier_scenario(df_combined)
-
-    # if outlier_scenarios is not None:
-    #     print('outlier_scenarios: ', outlier_scenarios)
-    #     metadata_df['is_outlier'] = metadata_df['Scenario_Name'].isin(outlier_scenarios)
-    # else:
-    #     print("No outliers")
-
-    outlier_scenarios = return_outlier_scenario(df_combined)
-    outlier_nodes = return_outlier_nodes(df_combined)
+    outlier_scenarios = return_outlier_scenario(df_combined, times_of_failure_h)
     
     if outlier_scenarios is not None:
         metadata_df['is_outlier'] = metadata_df['Scenario_Name'].isin(outlier_scenarios)
+        outlier_pipes = metadata_df.loc[metadata_df['is_outlier']]['leak_location'].tolist()
+        metadata_df.loc[metadata_df['leak_location'].isin(outlier_pipes), 'is_outlier'] = True
+
 
     metadata_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'scenario_metadata.csv')
     metadata_df.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'scenario_metadata.pkl')
 
-    signal_final.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals.csv')
-    signal_final.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
+    df_combined = df_combined[df_combined['Node'].isin(wn.node_name_list)]
 
     df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_with_bp.csv')
     df_combined.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_with_bp.pkl')
 
     # oflitrowuje wirtualne wezly
     signal_final = signal_final[signal_final['Node'].isin(wn.node_name_list)]
+
+    signal_final.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals.csv')
+    signal_final.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
 
     return signal_final
  
@@ -266,45 +250,39 @@ def run_single_leak(ldp, tofh, pipe_to_fail):
     return res_df
 
 def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_failure_h, n_jobs=-1):
-    # 1. Symulacja referencyjna
+
     wn = SIMULATION_CONFIG.create_network_real()
     sim = wntr.sim.WNTRSimulator(wn)
     ref_sim = sim.run_sim()
     ref_pressure_matrix = ref_sim.node['pressure']
     pipe_names = wn.pipe_name_list
 
-    # 2. Przygotowanie zadań
     tasks = list(itertools.product(leak_diameter_parameters, times_of_failure_h, pipe_names))
 
-    print('tasks[1]: ', tasks[1])
-    print('type(tasks[1]): ', type(tasks[1]))
+    # print('tasks[1]: ', tasks[1])
+    # print('type(tasks[1]): ', type(tasks[1]))
     t_dict = defaultdict(list)
 
     for index, task in enumerate(tasks):
         t_dict[task].append(index)
 
-    # Wyświetl tylko te, które mają więcej niż jeden indeks
     for task, indices in t_dict.items():
         if len(indices) > 1:
             print(f"Tupla {task} występuje na indeksach: {indices}")
     
-    # 3. Obliczenia równoległe
     results_list = Parallel(n_jobs=n_jobs)(
-        # delayed(run_single_leak)(ldp, tofh, pipe, ref_pressure_matrix)
         delayed(run_single_leak)(ldp, tofh, pipe) 
         for ldp, tofh, pipe in tqdm(tasks, desc="Parallel Leak Calculations")
     )
 
     results_list = [r for r in results_list if r is not None]
     
-    # Zabezpieczenie na wypadek gdyby wszystkie symulacje się nie powiodły
     if not results_list:
         print("Błąd: Brak wyników symulacji.")
         return pd.DataFrame(), pd.DataFrame()
 
     df_long = pd.concat(results_list, axis=0, ignore_index=True)
 
-    # --- TWORZENIE NAZWY SCENARIUSZA ---
     df_long['Scenario_Name'] = (
         'ldp' + df_long['leak_diameter_parameter'].astype(str) + 
         '_tofh' + df_long['time_of_failure_h'].astype(str) + 
@@ -320,15 +298,13 @@ def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_fa
         values='Pressure_Residual'
     ).reset_index()
 
-    #print(signal_final.columns.tolist())
-
     metadata_df = pd.DataFrame(scenario_metadata)
 
     bp_signals = get_blueprint_signals()
     df_combined = pd.merge(bp_signals, signal_final, on=['T', 'Node'], how='outer')
 
-    df_combined['T'] = df_combined['T'] / 3600
-    signal_final['T'] = signal_final['T'] / 3600
+    # df_combined['T'] = df_combined['T'] / 3600
+    # signal_final['T'] = signal_final['T'] / 3600
 
     signal_final.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_p.csv')
     signal_final.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
@@ -336,11 +312,12 @@ def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_fa
     df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_with_bp.csv')
     df_combined.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_with_bp.pkl')
 
-    outlier_scenarios = return_outlier_scenario(df_combined)
-    outlier_nodes = return_outlier_nodes(df_combined)
+    outlier_scenarios = return_outlier_scenario(df_combined, times_of_failure_h)
     
     if outlier_scenarios is not None:
         metadata_df['is_outlier'] = metadata_df['Scenario_Name'].isin(outlier_scenarios)
+        outlier_pipes = metadata_df.loc[metadata_df['is_outlier']]['leak_location'].tolist()
+        metadata_df.loc[metadata_df['leak_location'].isin(outlier_pipes), 'is_outlier'] = True
 
 
     metadata_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'scenario_metadata.csv')
@@ -349,3 +326,4 @@ def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_fa
     signal_final = signal_final[signal_final['Node'].isin(wn.node_name_list)]
 
     return signal_final
+ 

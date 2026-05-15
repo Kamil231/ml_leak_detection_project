@@ -39,7 +39,7 @@ class SimulationConfig:
     network: WaterNetworkParameters
     scenarios: ScenariosParameters
     
-    def create_network_real(self)-> wntr.network.WaterNetworkModel:
+    def create_network_real(self, seed_offset = 0)-> wntr.network.WaterNetworkModel:
         
         wn = wntr.network.WaterNetworkModel(self.network.inp_file_path)
         wn.options.time.duration = self.time.duration_s
@@ -49,7 +49,7 @@ class SimulationConfig:
         wn.options.hydraulic.minimum_pressure = self.network.minimum_pressure_m
         wn.options.hydraulic.demand_model = self.network.demand_model  
 
-        wn = get_alt_demand_wn(wn)
+        wn = get_alt_demand_wn(wn, seed_offset)
         
         return wn
 

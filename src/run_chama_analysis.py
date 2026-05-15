@@ -28,7 +28,10 @@ from joblib import Parallel, delayed
 from pathlib import Path
 from tqdm_joblib import tqdm_joblib
 import wntr
+from src.get_3sigma_threshold import get_1sigma_threshold
 #from src.get_3sigma_threshold import get_1sigma_threshold
+from src.precision_recall import get_precision_recall_data
+
 
 def get_blueprint_signals():
 
@@ -50,40 +53,32 @@ def get_blueprint_signals():
 
     return signal_final
 
-def run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters):
+def run_simulation(leak_diameter_parameters, times_of_failure_h):
+
+    threshold_parameters = [3]
+
     os.makedirs(SIMULATION_CONFIG.output_folder / 'pickle', exist_ok=True)   
     os.makedirs(SIMULATION_CONFIG.output_folder / 'csv', exist_ok=True)    
 
     chama_outputs = {}
     sensors_thp_dict = {}
 
-    #wn_local = SIMULATION_CONFIG.create_network_real()
-
-    # nodal_thresholds_dict = get_xsigma_threshold_dict(threshold_parameters)
-    # df_nodal_thresholds = pd.DataFrame(nodal_thresholds_dict)
-    # df_nodal_thresholds.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'nodal_thresholds.csv')
-    # df_nodal_thresholds.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'nodal_thresholds.pkl')
-
     signal = stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h)  
-    #signal = stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_failure_h) 
-    #signal_input = signal.drop(columns=['leak_diameter_parameter', 'time_of_failure_h']).copy() 
     signal_input = signal.copy()
 
-    # bp_signals = get_blueprint_signals()
-    # df_combined = pd.merge(bp_signals, signal, on=['T', 'Node'], how='outer')
+    scenario_metadata = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle/scenario_metadata.pkl')   
+    cols_to_drop = scenario_metadata.loc[scenario_metadata['is_outlier']]['Scenario_Name'].tolist()
+    # print('cols_to_drop: ', cols_to_drop)
+    signal_input = signal_input.drop(columns=cols_to_drop)
 
-    # df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_s.csv')
-    # df_combined.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
-
-    print(f"Signal shape: {signal_input.shape}")
-    print("signal_input:\n", signal_input)
+    thresholds_series = get_1sigma_threshold()
 
     for sensor_budget in tqdm(SIMULATION_CONFIG.scenarios.sensor_budget):
 
         wn_local = SIMULATION_CONFIG.create_network_real()
-        results_ImpactFormulation, sensors_thp_dict = sensors_ImpactFormulation.get_sensor_locations(wn_local, signal_input, threshold_parameters, sensor_budget)
+        results_ImpactFormulation, sensors_thp_dict = sensors_ImpactFormulation.get_sensor_locations(wn_local, signal_input, threshold_parameters, thresholds_series, sensor_budget)
         wn_local = SIMULATION_CONFIG.create_network_real()
-        results_CoverageFormulation, sensors_thp_dict = sensors_CoverageFormulation.get_sensor_locations(wn_local, signal_input, threshold_parameters, sensor_budget)
+        results_CoverageFormulation, sensors_thp_dict = sensors_CoverageFormulation.get_sensor_locations(wn_local, signal_input, threshold_parameters, thresholds_series, sensor_budget)
         
         chama_outputs[sensor_budget] = (results_ImpactFormulation, results_CoverageFormulation)
 
@@ -111,14 +106,20 @@ def run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_param
     with open(SIMULATION_CONFIG.output_folder / 'pickle' / 'sensors_thp_dict_s.pkl', 'wb') as f:
         pickle.dump(sensors_thp_dict, f)
 
+    precision_recall_data = get_precision_recall_data()
+    precision_recall_data.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'precision_recall_data_chama.pkl')
+
     print("Simulation ended.")
 
-def run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters):
+def run_simulation_parallel(leak_diameter_parameters, times_of_failure_h):
+    threshold_parameters = [3]
     output_base = Path(SIMULATION_CONFIG.output_folder)
     pickle_path = output_base / "pickle"
     csv_path = output_base / "csv"
     pickle_path.mkdir(parents=True, exist_ok=True)
     csv_path.mkdir(parents=True, exist_ok=True)
+
+    thresholds_series = get_1sigma_threshold()
 
     wn_local = SIMULATION_CONFIG.create_network_real()
     # nodal_thresholds_dict = get_xsigma_threshold_dict(threshold_parameters)
@@ -129,14 +130,15 @@ def run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, thresh
     #signal_input = signal.drop(columns=['leak_diameter_parameter', 'time_of_failure_h']).copy()
     signal_input = signal.copy()
 
-    # bp_signals = get_blueprint_signals()
-    # df_combined = pd.merge(bp_signals, signal, on=['T', 'Node'], how='outer')
+    scenario_metadata = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle/scenario_metadata.pkl')   
+    cols_to_drop = scenario_metadata.loc[scenario_metadata['is_outlier']]['Scenario_Name'].tolist()
+    # print('cols_to_drop: ', cols_to_drop)
+    # print('before: ', signal_input.columns.tolist())
+    signal_input = signal_input.drop(columns=cols_to_drop)
+    # print('after: ', signal_input.columns.tolist())
 
-    # df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_p.csv')
-    # df_combined.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
-
-    print(f"Signal shape: {signal_input.shape}")
-    print("signal_input:\n",signal_input)
+    # print(f"Signal shape: {signal_input.shape}")
+    # print("signal_input:\n",signal_input)
 
     if signal_input.empty:
         print("WARNING: signal_input is empty! Optimization will do nothing.")
@@ -147,23 +149,17 @@ def run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, thresh
         warnings.filterwarnings("ignore")
         wn_local = SIMULATION_CONFIG.create_network_real()
         res_impact, s_dict_i = sensors_ImpactFormulation.get_sensor_locations(
-            wn_local, signal_input, threshold_parameters, n
+            wn_local, signal_input, threshold_parameters, thresholds_series, n
         )
         res_coverage, s_dict_c = sensors_CoverageFormulation.get_sensor_locations(
-            wn_local, signal_input, threshold_parameters, n
+            wn_local, signal_input, threshold_parameters, thresholds_series, n
         )
         return n, res_impact, res_coverage, {**s_dict_i, **s_dict_c}
 
     budgets = SIMULATION_CONFIG.scenarios.sensor_budget
-    #parallel_pool = Parallel(n_jobs=-1)
     parallel_pool = Parallel(n_jobs=4)
 
     parallel_results = []
-    # with tqdm(total=len(budgets), desc="Real-time Optimization Progress") as pbar:
-    #     job_generator = (delayed(optimize_for_budget)(n) for n in budgets)
-    #     for result in parallel_pool(job_generator):
-    #         parallel_results.append(result)
-    #         pbar.update(1)
 
     with tqdm_joblib(tqdm(desc="Real-time Optimization Progress", total=len(budgets))) as pbar:
         job_generator = (delayed(optimize_for_budget)(n) for n in budgets)
@@ -199,5 +195,8 @@ def run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, thresh
         pickle.dump(chama_outputs, f)
     with open(pickle_path / "sensors_thp_dict.pkl", 'wb') as f:
         pickle.dump(final_sensors_thp_dict, f)
+
+    precision_recall_data = get_precision_recall_data()
+    precision_recall_data.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'precision_recall_data_chama.pkl')
 
     print(f"--- Completed. Results in: {output_base.absolute()} ---")
