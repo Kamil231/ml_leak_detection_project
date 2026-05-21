@@ -51,7 +51,7 @@ wn = SIMULATION_CONFIG.create_network_real()
 
 st.set_page_config(layout="wide")
 
-with st.expander("Analiza przebiegów sygnałów (Scenariusze)", expanded=True):
+with st.expander("Analiza przebiegów sygnałów", expanded=True):
 
     col_params_sig, col_plots_sig = st.columns([1, 4], vertical_alignment="top")
 
@@ -79,8 +79,8 @@ with st.expander("Analiza przebiegów sygnałów (Scenariusze)", expanded=True):
 
         if not view_mode:
             node_options = sorted(df_signals['Node'].unique())
-            selected_node = st.selectbox("Wybierz Węzeł", node_options, key="sig_node_select")
-            selected_thresh_param = st.selectbox("Parametr Threshold", threshold_col_options, key="sig_thresh_select")
+            selected_node = st.selectbox("Node", node_options, key="sig_node_select")
+            selected_thresh_param = st.selectbox("Threshold Parametr", threshold_col_options, key="sig_thresh_select")
             outlier_show = st.toggle("Pokaz scenariusze ktore\nnie pokrywaja sie z BP przed wyciekiem", value=False, key="toggle_view_mode_2")
         else:
             selected_scenario = st.selectbox("Wybierz Scenariusz", scenarios_picked, key="sig_scenario_select")
@@ -156,16 +156,16 @@ with st.expander("Analiza parametrów węzłów", expanded=True):
     col1, col2 = st.columns([1, 4])
 
     with col1:
-        st.write("### Ustawienia")
+        st.write("### Filtry")
         
         selected_node = st.selectbox(
-            "Wybierz Węzeł", 
+            "Node", 
             options=nodes_str,
             key="node_selector"
         )
         
         selected_param = st.selectbox(
-            "Wybierz parametr:",
+            "Parametr:",
             options=["demand", "pressure"],
             format_func=lambda x: "Demand" if x == "demand" else "Pressure",
             key="param_selector"
@@ -202,7 +202,7 @@ with st.expander("Analiza parametrów węzłów", expanded=True):
 
         unit = " [m]" if selected_param == "pressure" else "" 
         fig.update_layout(
-            title=f"Węzeł {selected_node}: {selected_param.capitalize()}",
+            title=f"Node {selected_node}: {selected_param.capitalize()}",
             xaxis_title="Czas [h]",
             yaxis_title=f"{selected_param.capitalize()}{unit}",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
@@ -213,7 +213,7 @@ with st.expander("Analiza parametrów węzłów", expanded=True):
 
         st.plotly_chart(fig, use_container_width=True)
 
-with st.expander("Mapa interaktywna sieci", expanded=True):
+with st.expander("Mapa sieci", expanded=True):
 
     edge_x_normal, edge_y_normal, edge_text_normal = [], [], []
     edge_x_special, edge_y_special, edge_text_special = [], [], []
@@ -306,113 +306,115 @@ with st.expander("Mapa interaktywna sieci", expanded=True):
         st.plotly_chart(fig, use_container_width=False)
 
 with st.expander("Optymalizacja Chama - Wyniki", expanded=True):
+
+    with st.expander("Chama - CoverageFormulation & ImpactFormulation", expanded=True):
     
-    budget_list = chama_outputs['Budget'].unique().tolist()
+        budget_list = chama_outputs['Budget'].unique().tolist()
 
-    budget_picked = st.selectbox("Sensor budget", budget_list)
+        budget_picked = st.selectbox("Sensor budget", budget_list)
 
-    impact_row = chama_outputs[(chama_outputs['Budget'] == budget_picked) & (chama_outputs['Formulation'] == 'ImpactFormulation')]
-    coverage_row = chama_outputs[(chama_outputs['Budget'] == budget_picked) & (chama_outputs['Formulation'] == 'CoverageFormulation')]
-    impact_row_dict = impact_row['Result'].item()
-    coverage_row_dict = coverage_row['Result'].item()
+        impact_row = chama_outputs[(chama_outputs['Budget'] == budget_picked) & (chama_outputs['Formulation'] == 'ImpactFormulation')]
+        coverage_row = chama_outputs[(chama_outputs['Budget'] == budget_picked) & (chama_outputs['Formulation'] == 'CoverageFormulation')]
+        impact_row_dict = impact_row['Result'].item()
+        coverage_row_dict = coverage_row['Result'].item()
 
-    impact_row_data = chama_outputs[
-        (chama_outputs['Budget'] == budget_picked) &
-        (chama_outputs['Formulation'] == 'ImpactFormulation')
-    ]
+        impact_row_data = chama_outputs[
+            (chama_outputs['Budget'] == budget_picked) &
+            (chama_outputs['Formulation'] == 'ImpactFormulation')
+        ]
 
-    coverage_row_data = chama_outputs[
-        (chama_outputs['Budget'] == budget_picked) &
-        (chama_outputs['Formulation'] == 'CoverageFormulation')
-    ]
+        coverage_row_data = chama_outputs[
+            (chama_outputs['Budget'] == budget_picked) &
+            (chama_outputs['Formulation'] == 'CoverageFormulation')
+        ]
 
-    if not impact_row_data.empty and not coverage_row_data.empty:
-        with st.expander("Impact Formulation", expanded=True):
+        if not impact_row_data.empty and not coverage_row_data.empty:
+            with st.expander("Impact Formulation", expanded=True):
 
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric('Objective: ', f"{impact_row_dict['Objective']:.4f}")
-            m2.metric('FractionDetected: ', f"{impact_row_dict['FractionDetected']:.4f}")
-            m3.metric('Solved: ', f"{impact_row_dict['Solved']:.4f}")
-            m4.metric('TotalSensorCost: ', f"{impact_row_dict['TotalSensorCost']:.4f}")
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric('Objective: ', f"{impact_row_dict['Objective']:.4f}")
+                m2.metric('FractionDetected: ', f"{impact_row_dict['FractionDetected']:.4f}")
+                m3.metric('Solved: ', f"{impact_row_dict['Solved']:.4f}")
+                m4.metric('TotalSensorCost: ', f"{impact_row_dict['TotalSensorCost']:.4f}")
 
-            st.divider()
+                st.divider()
 
-            st.markdown("Sensors")
-            st.write(", ".join(map(str, impact_row_dict['Sensors'])))
+                st.markdown("Sensors")
+                st.write(", ".join(map(str, impact_row_dict['Sensors'])))
 
-            st.divider()
+                st.divider()
 
-            fig, ax = plt.subplots(figsize=(6, 4))
+                fig, ax = plt.subplots(figsize=(6, 4))
 
-            sensor_results_wn = []
-            for sensor in impact_row_dict['Sensors']:
-                sensor_results_wn.append(sensors_wn_dict[sensor][0])
+                sensor_results_wn = []
+                for sensor in impact_row_dict['Sensors']:
+                    sensor_results_wn.append(sensors_wn_dict[sensor][0])
 
-            node_colors = {name: 'red' if name in sensor_results_wn else 'lightgrey' for name in wn.node_name_list}
-            wntr.graphics.plot_network(
-                wn, 
-                ax=ax, 
-                node_attribute=node_colors, 
-                node_size=10,               
-                add_colorbar=False,
-                title="Sensory zaznaczone na czerwono"
-            )
+                node_colors = {name: 'red' if name in sensor_results_wn else 'lightgrey' for name in wn.node_name_list}
+                wntr.graphics.plot_network(
+                    wn, 
+                    ax=ax, 
+                    node_attribute=node_colors, 
+                    node_size=10,               
+                    add_colorbar=False,
+                    title="Sensory zaznaczone na czerwono"
+                )
 
-            for node_name in impact_row_dict['Sensors']: 
-                node_name = sensors_wn_dict[node_name][0]
-                coord = wn.get_node(node_name).coordinates
-                ax.text(coord[0] + .3, coord[1] + .7, node_name, 
-                    fontsize=6, 
-                    fontweight='bold'
-                    )
-            col1, col2, col3 = st.columns([1, 2, 1])
+                for node_name in impact_row_dict['Sensors']: 
+                    node_name = sensors_wn_dict[node_name][0]
+                    coord = wn.get_node(node_name).coordinates
+                    ax.text(coord[0] + .3, coord[1] + .7, node_name, 
+                        fontsize=6, 
+                        fontweight='bold'
+                        )
+                col1, col2, col3 = st.columns([1, 2, 1])
 
-            with col2:
-                st.pyplot(fig, use_container_width=False)
+                with col2:
+                    st.pyplot(fig, use_container_width=False)
 
-    if not coverage_row.empty and not coverage_row.empty:
-        with st.expander("Coverage Formulation", expanded=True):
+        if not coverage_row.empty and not coverage_row.empty:
+            with st.expander("Coverage Formulation", expanded=True):
 
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric('Objective: ', f"{coverage_row_dict['Objective']:.4f}")
-            m2.metric('FractionDetected: ', f"{coverage_row_dict['FractionDetected']:.4f}")
-            m3.metric('Solved: ', f"{coverage_row_dict['Solved']:.4f}")
-            m4.metric('TotalSensorCost: ', f"{coverage_row_dict['TotalSensorCost']:.4f}")
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric('Objective: ', f"{coverage_row_dict['Objective']:.4f}")
+                m2.metric('FractionDetected: ', f"{coverage_row_dict['FractionDetected']:.4f}")
+                m3.metric('Solved: ', f"{coverage_row_dict['Solved']:.4f}")
+                m4.metric('TotalSensorCost: ', f"{coverage_row_dict['TotalSensorCost']:.4f}")
 
-            st.divider()
+                st.divider()
 
-            st.markdown("Sensors")
-            st.write(", ".join(map(str, coverage_row_dict['Sensors'])))
+                st.markdown("Sensors")
+                st.write(", ".join(map(str, coverage_row_dict['Sensors'])))
 
-            st.divider()
+                st.divider()
 
-            fig, ax = plt.subplots(figsize=(6, 4))
+                fig, ax = plt.subplots(figsize=(6, 4))
 
-            sensor_results_wn = []
-            for sensor in coverage_row_dict['Sensors']:
-                sensor_results_wn.append(sensors_wn_dict[sensor][0])
+                sensor_results_wn = []
+                for sensor in coverage_row_dict['Sensors']:
+                    sensor_results_wn.append(sensors_wn_dict[sensor][0])
 
-            node_colors = {name: 'red' if name in sensor_results_wn else 'lightgrey' for name in wn.node_name_list}
-            wntr.graphics.plot_network(
-                wn, 
-                ax=ax, 
-                node_attribute=node_colors, 
-                node_size=10,               
-                add_colorbar=False,
-                title="Sensory zaznaczone na czerwono"
-            )
+                node_colors = {name: 'red' if name in sensor_results_wn else 'lightgrey' for name in wn.node_name_list}
+                wntr.graphics.plot_network(
+                    wn, 
+                    ax=ax, 
+                    node_attribute=node_colors, 
+                    node_size=10,               
+                    add_colorbar=False,
+                    title="Sensory zaznaczone na czerwono"
+                )
 
-            for node_name in coverage_row_dict['Sensors']: 
-                node_name = sensors_wn_dict[node_name][0]
-                coord = wn.get_node(node_name).coordinates
-                ax.text(coord[0] + .3, coord[1] + .7, node_name, 
-                    fontsize=6, 
-                    fontweight='bold'
-                    )
-            col1, col2, col3 = st.columns([1, 2, 1])
+                for node_name in coverage_row_dict['Sensors']: 
+                    node_name = sensors_wn_dict[node_name][0]
+                    coord = wn.get_node(node_name).coordinates
+                    ax.text(coord[0] + .3, coord[1] + .7, node_name, 
+                        fontsize=6, 
+                        fontweight='bold'
+                        )
+                col1, col2, col3 = st.columns([1, 2, 1])
 
-            with col2:
-                st.pyplot(fig, use_container_width=False)
+                with col2:
+                    st.pyplot(fig, use_container_width=False)
 
     with st.expander("Analiza wyników symulacji wycieków", expanded=True):
 
@@ -513,14 +515,24 @@ with st.expander("Optymalizacja Chama - Wyniki", expanded=True):
         st.plotly_chart(fig, use_container_width=True)
 
     with st.expander("Precision Recall", expanded=True):
+
+        budget_list = chama_outputs['Budget'].unique().tolist()
+        default_budget = budget_list[len(budget_list) // 2]
         
         col_params, col_plots = st.columns([1, 4], vertical_alignment="top")
 
         with col_params:
             st.markdown("### Filtry")
             
-            selected_budget = st.slider("Wybierz Budżet", 1, 10, 5)
-            selected_form = st.selectbox("Wybierz Formułę", precision_recall_data['formulation'].unique())
+            # selected_budget = st.slider("Budget", 1, 10, 5)
+
+            selected_budget = st.select_slider(
+                "Budget",
+                options=budget_list,
+                value=default_budget,
+                key="pr_budget"
+            )
+            selected_form = st.selectbox("Formulation", precision_recall_data['formulation'].unique())
 
             st.markdown("**Wybierz Threshold (THP):**")
 
@@ -550,7 +562,6 @@ with st.expander("Optymalizacja Chama - Wyniki", expanded=True):
         ]
 
         with col_plots:
-            # Wykres Precision-Recall
             fig_pr = px.line(
                 filtered_precision_recall_data, 
                 x="recall", 
@@ -562,7 +573,6 @@ with st.expander("Optymalizacja Chama - Wyniki", expanded=True):
             )
             st.plotly_chart(fig_pr, use_container_width=True)
 
-            # Wykres F1-Score vs Threshold
             fig_f1 = px.line(
                 filtered_precision_recall_data,
                 x="thp",
@@ -573,3 +583,74 @@ with st.expander("Optymalizacja Chama - Wyniki", expanded=True):
             st.plotly_chart(fig_f1, use_container_width=True)
 
             print('filtered_precision_recall_data: \n', filtered_precision_recall_data)
+
+    with st.expander("Confusion Matrix", expanded=True): 
+        
+        col_params_cm, col_plots_cm = st.columns([1, 4], vertical_alignment="top")
+
+        budget_list = chama_outputs['Budget'].unique().tolist()
+        default_budget = budget_list[len(budget_list) // 2]
+
+        with col_params_cm:
+            st.markdown("### Filtry Macierzy")
+
+            selected_budget_cm = st.select_slider(
+                "Budget",
+                options=budget_list,
+                value=default_budget,
+                key="cm_budget"
+            )
+
+            #selected_budget_cm = st.slider("Wybierz Budżet", 1, 10, 5, key="cm_budget")
+
+            selected_form_cm = st.selectbox("Formulation", precision_recall_data['formulation'].unique(), key="cm_form")
+            
+            unique_thp_cm = sorted(precision_recall_data['thp'].dropna().unique())
+            selected_thp_cm = st.selectbox(
+                "Wybierz Threshold (THP)", 
+                unique_thp_cm, 
+                index=len(unique_thp_cm)//2, 
+                format_func=lambda x: f"{x:.2f}", 
+                key="cm_thp"
+            )
+
+            unique_leaks = precision_recall_data['leak_diameters'].unique()
+            selected_leak_cm = st.selectbox("Wybierz Analizowany Wyciek", unique_leaks, key="cm_leak")
+
+        filtered_cm_data = precision_recall_data[
+            (precision_recall_data['budget'] == selected_budget_cm) & 
+            (precision_recall_data['formulation'] == selected_form_cm) &
+            (precision_recall_data['thp'] == selected_thp_cm) &
+            (precision_recall_data['leak_diameters'] == selected_leak_cm)
+        ]
+
+        with col_plots_cm:
+            if filtered_cm_data.empty:
+                st.warning("Brak danych do wyświetlenia dla wybranych parametrów.")
+            else:
+                row = filtered_cm_data.iloc[0]
+                tp, fp = int(row['TP']), int(row['FP'])
+                tn, fn = int(row['TN']), int(row['FN'])
+
+                z_values = [[tn, fp], 
+                            [fn, tp]]
+                
+                x_labels = ['Przewidywany Szum (-)', 'Przewidywany Wyciek (+)']
+                y_labels = ['Faktyczny Szum (-)', 'Faktyczny Wyciek (+)']
+
+                fig_cm = px.imshow(
+                    z_values, 
+                    x=x_labels, 
+                    y=y_labels, 
+                    text_auto=True, 
+                    color_continuous_scale=[[0, 'white'], [1, 'white']], 
+                    title=f"Macierz Pomyłek (Budżet: {selected_budget_cm}, THP: {selected_thp_cm:.2f}, Wyciek: {selected_leak_cm})"
+                )
+                
+                fig_cm.update_layout(
+                    xaxis_title="Decyzja Systemu (Algorytm)", 
+                    yaxis_title="Stan Rzeczywisty (Fizyka Sieci)",
+                    coloraxis_showscale=False 
+                )
+
+                st.plotly_chart(fig_cm, use_container_width=True)

@@ -53,7 +53,7 @@ def get_blueprint_signals():
 
     return signal_final
 
-def run_simulation(leak_diameter_parameters, times_of_failure_h):
+def run_chama_simulation(leak_diameter_parameters, times_of_failure_h):
 
     threshold_parameters = [3]
 
@@ -111,7 +111,7 @@ def run_simulation(leak_diameter_parameters, times_of_failure_h):
 
     print("Simulation ended.")
 
-def run_simulation_parallel(leak_diameter_parameters, times_of_failure_h):
+def run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h):
     threshold_parameters = [3]
     output_base = Path(SIMULATION_CONFIG.output_folder)
     pickle_path = output_base / "pickle"

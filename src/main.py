@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 warnings.filterwarnings("ignore", message="pkg_resources is deprecated")
 
 from src.config import SIMULATION_CONFIG
-from src.run_chama_analysis import run_simulation, run_simulation_parallel
+from src.run_chama_analysis import run_chama_simulation, run_chama_simulation_parallel
 import logging
 import numpy as np
 import yaml
@@ -66,8 +66,8 @@ times_of_failure_h = [8]'''
 # times_of_failure_h = [24, 48]
 # print('threshold_parameters: ', len(threshold_parameters))
 # print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))
-# #run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
-# run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# #run_chama_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
 
 # leak_diameter_parameters = [0.01, .05, .1, 0.15, .02, 0.4, 0.6]
 #leak_diameter_parameters = [0.01, .02, 0.6]
@@ -75,24 +75,24 @@ leak_diameter_parameters = [round(x * 0.05, 2) for x in range(1, 15)]
 # times_of_failure_h = [24, 48]
 times_of_failure_h = [48]
 print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))
-#run_simulation(leak_diameter_parameters, times_of_failure_h)
-run_simulation_parallel(leak_diameter_parameters, times_of_failure_h)
+#run_chama_simulation(leak_diameter_parameters, times_of_failure_h)
+run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h)
 
 # threshold_parameters = [1, 2]
 # leak_diameter_parameters = [0.05, 0.1, 0.6]
 # times_of_failure_h = [0, 8]
 # print('threshold_parameters: ', len(threshold_parameters))
 # print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))
-# #run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
-# run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# #run_chama_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
 
 # threshold_parameters = [0.2, 1, 2, 3, 10]
 # leak_diameter_parameters = [0.05, 0.1, 0.6]
 # times_of_failure_h = [16, 30]
 # print('threshold_parameters: ', len(threshold_parameters))
 # print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))
-# run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
-# #run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# run_chama_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# #run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
 
 # threshold_parameters = [1, 1.5, 2, 2.5, 3]
 # leak_diameter_parameters = [0.05, 0.75, 0.1, 0.125, 0.15, 0.2, 0.4, 0.6]
@@ -102,8 +102,8 @@ run_simulation_parallel(leak_diameter_parameters, times_of_failure_h)
 # print(threshold_parameters)
 # print(leak_diameter_parameters)
 # print(times_of_failure_h)
-# #run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
-# run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# #run_chama_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
 
 # #!!!Big Dataset
 # threshold_parameters = [1, 1.5, 2, 2.5, 3]
@@ -114,8 +114,8 @@ run_simulation_parallel(leak_diameter_parameters, times_of_failure_h)
 # print(threshold_parameters)
 # print(leak_diameter_parameters)
 # print(times_of_failure_h)
-# #run_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
-# run_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# #run_chama_simulation(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
+# run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h, threshold_parameters)
 
 
 with open(SIMULATION_CONFIG.output_folder / 'config.txt', 'w', encoding='utf-8') as f:

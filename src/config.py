@@ -86,6 +86,6 @@ SIMULATION_CONFIG = SimulationConfig(
         noise_parameter = 2,
         sigma3_sim_number = 30,
         #sensor_budget = list(range(1,16)) # + list(range(10, 160, 1))
-        sensor_budget = list(range(1,11)) # + list(range(10, 160, 1))
+        sensor_budget = list(range(1,21)) # + list(range(10, 160, 1))
     )
 )
