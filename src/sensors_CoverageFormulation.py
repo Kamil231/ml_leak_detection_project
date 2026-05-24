@@ -37,14 +37,20 @@ def get_sensor_locations(wn, signal, threshold_parameters, thresholds_series, se
     for location in sensor_names:
         position = chama.sensors.Stationary(location)
         same_location_sensors = []
+        m_node = thresholds_series.loc[location, 'mean']
+        s_node = thresholds_series.loc[location, 'std']
         for threshold_parameter in threshold_parameters:
             sensor_name = f'Node{location}_thp{threshold_parameter}'
             sensors_thp_dict[sensor_name] = threshold_parameter
-            detector = chama.sensors.Point(threshold_parameter * thresholds_series[location], sample_times)
+
+            node_threshold = m_node + (threshold_parameter * s_node)
+
+            detector = chama.sensors.Point(node_threshold, sample_times)
             stationary_pt_sensor = chama.sensors.Sensor(position, detector)
             sensors[sensor_name] = stationary_pt_sensor
             same_location_sensors.append(sensor_name)
             cost_data_list.append({'Sensor': sensor_name, 'Cost': 1})
+            
         grouped_sensors_list.append(same_location_sensors)
 
     det_times = chama.impact.extract_detection_times(signal, sensors)

@@ -30,6 +30,7 @@ def generate_leak_signals():
     return signals_long
 
 def generate_bp_signals(seed_offset = 0):
+
     wn_base = SIMULATION_CONFIG.create_network_base()
     sim_base = wntr.sim.WNTRSimulator(wn_base)
     results_base = sim_base.run_sim()
@@ -45,6 +46,7 @@ def generate_bp_signals(seed_offset = 0):
 
     signal_final = residuals_stacked.reset_index()
     signal_final.rename(columns={'level_0': 'T', 'level_1': 'Node'}, inplace=True) 
+
     return signal_final
 
 def get_sensors_list_chama():
@@ -125,7 +127,11 @@ def get_precision_recall_leak_df(target_leak_diameters, leak_signals, nodal_thre
                     
                     t_vals, sig_vals, tof_seconds = signals_dict[(scenario, node_id)]
 
-                    threshold = thp * nodal_thresholds[node_id]
+                    #threshold = thp * nodal_thresholds[node_id]
+                    m_node = nodal_thresholds.loc[node_id, 'mean']
+                    s_node = nodal_thresholds.loc[node_id, 'std']
+
+                    threshold = m_node + (thp * s_node)
 
                     is_above_thresh = sig_vals >= threshold
                     is_before_tof = t_vals < tof_seconds
@@ -162,7 +168,12 @@ def get_precision_recall_leak_df(target_leak_diameters, leak_signals, nodal_thre
                             continue
                             
                         sig_vals = bp_node_dict[node_id]
-                        threshold = thp * nodal_thresholds[node_id]
+                        
+                        #threshold = thp * nodal_thresholds[node_id]
+                        m_node = nodal_thresholds.loc[node_id, 'mean']
+                        s_node = nodal_thresholds.loc[node_id, 'std']
+
+                        threshold = m_node + (thp * s_node)
                         
                         if (sig_vals >= threshold).any():
                             system_alarmed_bp = True
@@ -215,6 +226,9 @@ def get_precision_recall_data():
     
     nodal_thresholds = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'nodal_thresholds_std.pkl')
     sensors_picked = get_sensors_list_chama()
+
+    print('sensors_picked: ')
+    print(sensors_picked)
 
     precomputed_bp = precompute_bp_signals_dict(max_seed=20)
     

@@ -71,7 +71,7 @@ times_of_failure_h = [8]'''
 
 # leak_diameter_parameters = [0.01, .05, .1, 0.15, .02, 0.4, 0.6]
 #leak_diameter_parameters = [0.01, .02, 0.6]
-leak_diameter_parameters = [round(x * 0.05, 2) for x in range(1, 15)]
+leak_diameter_parameters = [round(x * 0.05, 2) for x in range(1, 20)]
 # times_of_failure_h = [24, 48]
 times_of_failure_h = [48]
 print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))

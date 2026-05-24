@@ -26,12 +26,19 @@ def get_1sigma_threshold(num_runs=100):
         all_residuals.append(residuals_matrix)
 
     combined_residuals = pd.concat(all_residuals, ignore_index=True)
-    thresholds = combined_residuals.std()
 
-    thresholds.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'nodal_thresholds_std.pkl')
+    thresholds_std = combined_residuals.std()
+    thresholds_mean = combined_residuals.mean()
 
-    return thresholds
+    df_thresholds = pd.DataFrame({
+        'mean': thresholds_mean,
+        'std': thresholds_std
+    })
+
+    df_thresholds.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'nodal_thresholds_std.pkl')
+
+    return df_thresholds
 
 
 
-
+print(get_1sigma_threshold())

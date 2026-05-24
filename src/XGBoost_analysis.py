@@ -1,7 +1,7 @@
 import pandas as pd
 import xgboost as xgb
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix, precision_recall_curve, f1_score
+from sklearn.metrics import classification_report, confusion_matrix
 import pandas as pd
 import numpy as np
 from src.config import SIMULATION_CONFIG
@@ -9,13 +9,11 @@ import wntr
 from tqdm import tqdm
 from joblib import Parallel, delayed
 from sklearn.metrics import roc_curve
+import pickle
+from pprint import pprint
 
-
-path_str = r"/Users/kamilzawitaj/Documents/Studia/PW OKNO - AiR/Praca Mgr/code/leak_simulation/output_folder/pickle"
-path_csv = r"/Users/kamilzawitaj/Documents/Studia/PW OKNO - AiR/Praca Mgr/code/leak_simulation/output_folder/csv"
-
-signal_leak_long = pd.read_pickle(path_str + '/signals.pkl')
-scenario_metadata = pd.read_pickle(path_str + '/scenario_metadata.pkl')
+signal_leak_long = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
+scenario_metadata = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'scenario_metadata.pkl')
 
 def generate_bp_signals(seed_offset = 0):
     
@@ -70,6 +68,8 @@ def get_signals_df():
         how='left'
     )
 
+    signal_leak_wide_with_meta['leak_diameter_parameter'] = signal_leak_wide_with_meta['leak_diameter_parameter'].round(4)
+
     signal_leak_wide_with_meta = signal_leak_wide_with_meta[signal_leak_wide_with_meta['is_outlier'] == False]
 
     signal_leak_wide_final = signal_leak_wide_with_meta.pivot_table(
@@ -89,12 +89,6 @@ def get_signals_df():
 
     signal_leak_wide_final['Is_Leak'] = (signal_leak_wide_final['T'] > (signal_leak_wide_final['time_of_failure_h'] * 3600)).astype(int)
 
-    # df_temp = pd.DataFrame() #generate_bp_signals(0)
-
-    # for seed in tqdm(range(max_seed), desc="WNTR Base Simulations"): 
-    #     df_bp = generate_bp_signals(seed)
-    #     df_temp = pd.concat([df_temp, df_bp], axis=0, ignore_index=True)
-
     results_list = Parallel(n_jobs=-1)(
         delayed(generate_bp_signals)(seed) 
         for seed in tqdm(range(max_seed), desc="Parallel WNTR Base Simulations")
@@ -113,77 +107,138 @@ def get_signals_df():
 
 def XGBoost_analysis():
 
-    #df_signals = get_signals_df()
+    #get_signals_df()
+
     df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_dataset_XGB.pkl')
 
     y = df_signals['Is_Leak']
 
     metadata_cols = ['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T', 'Is_Leak']
-    X = df_signals.drop(columns=metadata_cols, errors='ignore')
-
     metadata = df_signals[['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T']]
+    print('df_signals[\'leak_diameter_parameter\'].unique(): ', df_signals['leak_diameter_parameter'].unique())
 
-    unique_scenarios = metadata['Scenario_Name'].unique()
+    leak_diameter_parameters = df_signals['leak_diameter_parameter'].unique().tolist()
+    leak_diameter_parameters.append('All')
 
-    train_scenarios, test_scenarios = train_test_split(
-        unique_scenarios, 
-        test_size=0.3,         
-        random_state=42        
-    )
+    results_list = []
 
-    train_keys = metadata['Scenario_Name'].isin(train_scenarios)
-    test_keys = metadata['Scenario_Name'].isin(test_scenarios)
+    for leak_diameter_parameter in df_signals['leak_diameter_parameter'].unique():
 
-    X_train, y_train = X[train_keys], y[train_keys]
-    X_test, y_test = X[test_keys], y[test_keys]
-    metadata_test = metadata[test_keys].copy() 
+        print('leak_diameter_parameter: ', leak_diameter_parameter, '\t', type(leak_diameter_parameter))
 
-    noise_number = np.sum(y_train == 0)
-    leak_number = np.sum(y_train == 1)
-    class_weight = noise_number / leak_number
+        # X = df_signals.loc[
+        #     (df_signals['leak_diameter_parameter'] == leak_diameter_parameter) | 
+        #     (df_signals['leak_diameter_parameter'].isna())
+        # ]
 
-    print('noise_number: ', noise_number)
-    print('leak_number: ', leak_number)
+        if pd.isna(leak_diameter_parameter):
+            continue # Albo `mask = df_signals['leak_diameter_parameter'].isna()` jeśli chcesz modelować same zera/NaN
+        elif leak_diameter_parameter == 'All':
+            mask = pd.Series(True, index=df_signals.index) # Bierzemy wszystko
+        else:
+            mask = (df_signals['leak_diameter_parameter'] == leak_diameter_parameter) | (df_signals['leak_diameter_parameter'].isna())
 
-    # Inicjalizacja klasyfikatora
-    model_xgb = xgb.XGBClassifier(
-        n_estimators=100,         # liczba drzew decyzyjnych
-        max_depth=5,              # głębokość drzewa (zapobiega overfitingowi)
-        learning_rate=0.1,        # szybkość uczenia
-        scale_pos_weight=class_weight,# ratuje nas przed niezbalansowanym zbiorem danych
-        random_state=42,
-        eval_metric='logloss'
-    )
+        X_filtered = df_signals.loc[mask].copy()
+        y_filtered = y.loc[mask].copy()
+        metadata_filtered = metadata.loc[mask].copy()
 
-    model_xgb.fit(X_train, y_train)
+        X_filtered = X_filtered.drop(columns=metadata_cols, errors='ignore')
 
-    # czy jest wyciek? - prawdopodob
-    probabilities = model_xgb.predict_proba(X_test)[:, 1]
+        unique_scenarios = metadata_filtered['Scenario_Name'].unique()
 
-    metadata_test['Leak_Probability'] = probabilities
-    metadata_test['True_Is_Leak'] = y_test
+        train_scenarios, test_scenarios = train_test_split(
+            unique_scenarios, 
+            test_size=0.3,         
+            random_state=42        
+        )
 
-    prog_decyzyjny = 0.5
-    metadata_test['Final_Prediction'] = (metadata_test['Leak_Probability'] >= prog_decyzyjny).astype(int)
+        train_keys = metadata_filtered['Scenario_Name'].isin(train_scenarios)
+        test_keys = metadata_filtered['Scenario_Name'].isin(test_scenarios)
 
-    print("XGBoost wyniki:")
-    print(classification_report(metadata_test['True_Is_Leak'], metadata_test['Final_Prediction']))
-
-    waznosc = pd.DataFrame({
-        'Node': X_train.columns,
-        'Importance': model_xgb.feature_importances_
-    }).sort_values(by='Importance', ascending=False)
-
-    top_nodes = waznosc.head(20)['Node'].tolist()
-    print("Najważniejsze węzły wybrane przez XGBoost:", top_nodes)
-
-    for node in top_nodes:
-        fpr, tpr, thresholds = roc_curve(y_train, X_train[node])
+        X_train, y_train = X_filtered.loc[train_keys], y_filtered.loc[train_keys]
+        X_test, y_test = X_filtered.loc[test_keys], y_filtered.loc[test_keys]
         
-        idx_optymalne = (tpr - fpr).argmax()
-        optymalny_threshold = thresholds[idx_optymalne]
-        
-        print(f"Dla Węzła [{node}] optymalny próg detekcji wynosi: {optymalny_threshold:.4f}")
+        metadata_test = metadata_filtered.loc[test_keys].copy()
+
+        noise_number = np.sum(y_train == 0)
+        leak_number = np.sum(y_train == 1)
+        class_weight = noise_number / leak_number
+
+        model_xgb = xgb.XGBClassifier(
+            n_estimators=100,         
+            max_depth=5,              
+            learning_rate=0.1,        
+            scale_pos_weight=class_weight,
+            random_state=42,
+            eval_metric='logloss'
+        )
+
+        model_xgb.fit(X_train, y_train)
+
+        probabilities = model_xgb.predict_proba(X_test)[:, 1]
+
+        metadata_test['Leak_Probability'] = probabilities
+        metadata_test['True_Is_Leak'] = y_test
+
+        col_names = ["TP", "FP", "TN", "FN"]
+
+        decision_thresholds = [round(x * 0.1, 1) for x in range(1, 10)]
+
+        for decision_threshold in decision_thresholds:
+
+            metadata_test['Final_Prediction'] = (metadata_test['Leak_Probability'] >= decision_threshold).astype(int)
+            metadata_test['Decision_Threshold'] = decision_threshold
+
+            tn, fp, fn, tp = confusion_matrix(
+                metadata_test['True_Is_Leak'], 
+                metadata_test['Final_Prediction']
+            ).ravel()
+
+            results_list.append({
+                'leak_diameter_parameter': leak_diameter_parameter,
+                'decision_threshold': decision_threshold,
+                'TP': int(tp),
+                'FP': int(fp),
+                'TN': int(tn),
+                'FN': int(fn)
+                })
+
+            # waznosc = pd.DataFrame({
+            #     'Node': X_train.columns,
+            #     'Importance': model_xgb.feature_importances_
+            # }).sort_values(by='Importance', ascending=False)
+
+            # top_nodes = waznosc.head(len(SIMULATION_CONFIG.scenarios.sensor_budget))['Node'].tolist()
+
+            # top_nodes_path = SIMULATION_CONFIG.output_folder / 'pickle' / 'top_nodes_xgb.pkl'
+
+            # nodes_threshold_list = []
+
+            # for node in top_nodes:
+            #     fpr, tpr, thresholds = roc_curve(y_train, X_train[node])
+                
+            #     idx_optymalne = (tpr - fpr).argmax()
+            #     optymalny_threshold = thresholds[idx_optymalne].item()
+
+            #     nodes_threshold_list.append((node, optymalny_threshold))
+
+
+    # pickle_output_path_report_thd_dict = SIMULATION_CONFIG.output_folder / 'pickle' / 'classification_report.pkl'
+    pickle_output_confusion_matrix_df = SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_df.pkl'
+    csv_output_confusion_matrix_df = SIMULATION_CONFIG.output_folder / 'csv' / 'confusion_matrix_df.csv'
+
+    # with open(pickle_output_path_report_thd_dict, 'wb') as file:
+    #     pickle.dump(report_thd_dict, file)
+
+    results_df = pd.DataFrame(results_list)
+
+    print(results_df.shape, '\n\n\n')
+    print(results_df)
+
+    with open(pickle_output_confusion_matrix_df, 'wb') as file:
+        pickle.dump(results_df, file)
+
+    results_df.to_csv(csv_output_confusion_matrix_df)
 
 XGBoost_analysis()
 
