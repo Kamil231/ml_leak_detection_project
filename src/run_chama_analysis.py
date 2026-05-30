@@ -29,9 +29,7 @@ from pathlib import Path
 from tqdm_joblib import tqdm_joblib
 import wntr
 from src.get_3sigma_threshold import get_1sigma_threshold
-#from src.get_3sigma_threshold import get_1sigma_threshold
 from src.precision_recall import get_precision_recall_data
-
 
 def get_blueprint_signals():
 

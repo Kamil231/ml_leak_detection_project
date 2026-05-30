@@ -3,21 +3,10 @@ import pickle
 import matplotlib.pyplot as plt
 from src.config import SIMULATION_CONFIG
 import wntr
-# from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 from sklearn.metrics import auc
-
-wn = SIMULATION_CONFIG.create_network_real()
-
-pickle_path = '/Users/kamilzawitaj/Documents/Studia/PW OKNO - AiR/Praca Mgr/code/leak_simulation/output_folder/pickle/'
-
-# with open(pickle_path + 'confusion_matrix_lgb.pkl', 'rb') as file:
-#     confusion_matrix_df_LGB = pickle.load(file)
-
-# with open(pickle_path + 'confusion_matrix_best_nodes_lgb.pkl', 'rb') as file:
-#     confusion_matrix_best_nodes_df_LGB = pickle.load(file)
 
 def display_LightGBM(confusion_matrix_best_nodes_df_LGB, confusion_matrix_df_LGB, wn):
     with st.expander("Optymalizacja LightGBM - Wyniki"):
@@ -551,5 +540,3 @@ def display_LightGBM(confusion_matrix_best_nodes_df_LGB, confusion_matrix_df_LGB
 
                 with col2:
                     st.pyplot(fig, use_container_width=False)
-
-# display_LightGBMoost(confusion_matrix_best_nodes_df_LGB, wn)

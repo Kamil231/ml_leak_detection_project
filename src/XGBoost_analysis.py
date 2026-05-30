@@ -121,8 +121,6 @@ def XGBoost_analysis_all_nodes():
 
     for leak_diameter_parameter in tqdm(leak_diameter_parameters):
 
-        # print('leak_diameter_parameter: ', leak_diameter_parameter, '\t', type(leak_diameter_parameter))
-
         if pd.isna(leak_diameter_parameter):
             continue 
         elif leak_diameter_parameter == 'All':
@@ -337,5 +335,5 @@ def XGBoost_analysis_best_nodes():
         importances_df.to_csv(csv_output_nodes, index=False)
         print("Wszystkie pliki zostały pomyślnie zapisane!")
 
-XGBoost_analysis_all_nodes()
-XGBoost_analysis_best_nodes()
+# XGBoost_analysis_all_nodes()
+# XGBoost_analysis_best_nodes()

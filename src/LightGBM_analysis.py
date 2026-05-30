@@ -128,6 +128,6 @@ def LightGBM_analysis_best_nodes():
     pd.DataFrame(results_list).to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_best_nodes_lgb.pkl')
     pd.concat(importances_list).to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'top_nodes_lgb.pkl')
 
-if __name__ == "__main__":
-    LightGBM_analysis_all_nodes()
-    LightGBM_analysis_best_nodes()
+# if __name__ == "__main__":
+#     LightGBM_analysis_all_nodes()
+#     LightGBM_analysis_best_nodes()

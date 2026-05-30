@@ -4,27 +4,11 @@ import pickle
 import matplotlib.pyplot as plt
 from src.config import SIMULATION_CONFIG
 import wntr
-# from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 from sklearn.metrics import auc
 
-wn = SIMULATION_CONFIG.create_network_real()
-
-PICKLE_DIR = Path('/Users/kamilzawitaj/Documents/Studia/PW OKNO - AiR/Praca Mgr/code/leak_simulation/output_folder/pickle/')
-filename_cm_all = 'confusion_matrix_df_nn.pkl'
-
-PICKLE_DIR = Path('/Users/kamilzawitaj/Documents/Studia/PW OKNO - AiR/Praca Mgr/code/leak_simulation/output_folder/pickle/')
-filename_cm_top = 'confusion_matrix_df_nn_top_nodes.pkl'
-
-with open(PICKLE_DIR / filename_cm_all, 'rb') as file:
-	confusion_matrix_df = pickle.load(file)
-
-with open(PICKLE_DIR / filename_cm_top, 'rb') as file:
-	confusion_matrix_best_nodes_df = pickle.load(file)
-
-# def display_XGBoost(confusion_matrix_best_nodes_df,confusion_matrix_df,wn):
 def display_NN(confusion_matrix_df, confusion_matrix_best_nodes_df, wn):
 
 
@@ -558,5 +542,3 @@ def display_NN(confusion_matrix_df, confusion_matrix_best_nodes_df, wn):
 
 		        with col2:
 		            st.pyplot(fig, use_container_width=False)
-
-# display_NN(confusion_matrix_df, confusion_matrix_best_nodes_df, wn)

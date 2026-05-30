@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from joblib import Parallel, delayed
 import pickle
-# from pathlib import PATH
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import roc_auc_score
 import warnings
@@ -448,13 +447,3 @@ def NN_analysis_best_nodes():
 	    pickle.dump(results_df, file)
 
 	results_df.to_csv(csv_output_confusion_matrix_df, index=False)
-
-
-
-# nn_analysis_parallel()
-importance_df = NN_pick_best_nodes()
-print(importance_df)
-
-print(importance_df['Node'].to_list())
-
-# NN_analysis_best_nodes()

@@ -10,7 +10,6 @@ import pandas as pd
 import plotly.express as px
 from sklearn.metrics import auc
 
-
 def display_Chama(chama_outputs, sensors_wn_dict, wn, precision_recall_data):
 
 	with st.expander("Optymalizacja Chama - Wyniki"):

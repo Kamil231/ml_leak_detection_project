@@ -11,7 +11,6 @@ with open(pickle_path + 'precision_recall_data_chama.pkl', 'rb') as file:
     precision_recall_data = pickle.load(file)
 
 
-
 precision_recall_data['TPR'] = precision_recall_data['TP'] / (precision_recall_data['TP'] + precision_recall_data['FN'] + 1e-9)
 precision_recall_data['FPR'] = precision_recall_data['FP'] / (precision_recall_data['FP'] + precision_recall_data['TN'] + 1e-9)
 
