@@ -40,5 +40,3 @@ def get_1sigma_threshold(num_runs=100):
     return df_thresholds
 
 
-
-print(get_1sigma_threshold())

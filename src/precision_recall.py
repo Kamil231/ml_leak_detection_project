@@ -228,7 +228,7 @@ def get_precision_recall_data():
     sensors_picked = get_sensors_list_chama()
 
     print('sensors_picked: ')
-    print(sensors_picked)
+    print('sensors_picked: ')
 
     precomputed_bp = precompute_bp_signals_dict(max_seed=20)
     

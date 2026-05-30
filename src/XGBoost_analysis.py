@@ -119,7 +119,7 @@ def XGBoost_analysis_all_nodes():
 
     results_list = []
 
-    for leak_diameter_parameter in tqdm(df_signals['leak_diameter_parameter'].unique()):
+    for leak_diameter_parameter in tqdm(leak_diameter_parameters):
 
         # print('leak_diameter_parameter: ', leak_diameter_parameter, '\t', type(leak_diameter_parameter))
 
