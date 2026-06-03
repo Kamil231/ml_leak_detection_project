@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 PYTHON = python
 PIP = $(PYTHON) -m pip
 MODULE = src.main
@@ -12,23 +14,39 @@ all: install run display
 
 help:
 	@echo "Dostępne komendy:"
-	@echo "  make run      - Uruchamia główny skrypt (python -m src.main)"
-	@echo "  make install  - Instaluje zależności z requirements.txt"
-	@echo "  make display  - Wyświetla wyniki"
+	@echo "  make run      - Uruchamia obliczenia (python -m src.main)"
+	@echo "  make install  - Instaluje biblioteki"
+	@echo "  make display  - Uruchamia Streamlit z wykresami"
 
 run:
 	$(PYTHON) -m $(MODULE)
 
 install:
+	@echo "1. Sprawdzanie i instalacja środowiska Python"
+	@if ! command -v $(PYTHON) &> /dev/null; then \
+		echo "Brak Pythona w środowisku, instaluję Pythona i pip"; \
+		conda install -y python pip; \
+	else \
+		echo "Python jest już zainstalowany."; \
+	fi
+
+	@echo "2. Instalacja pakietów (requirements.txt)"
 	$(PIP) install -r requirements.txt
+	
+	@echo "3. Instalacja pakietów systemowych (libomp, glpk"
 ifeq ($(UNAME_S),Darwin)
-	@echo "Wnstaluje libomp dla macos"
+	@if ! command -v brew &> /dev/null; then \
+		echo "Brak Homebrew"; \
+		/bin/bash -c "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; \
+		eval "$$(/opt/homebrew/bin/brew shellenv)"; \
+	else \
+		echo "Homebrew jest już zainstalowany."; \
+	fi
 	brew install libomp glpk
 else ifeq ($(UNAME_S),Linux)
-	@echo "Instaluje libomp lunux"
 	sudo apt-get update && sudo apt-get install -y libomp-dev glpk-utils
 endif
+	@echo "nstalacja zakończona"
 
 display:
 	PYTHONPATH=. $(STREAMLIT) run $(DASHBOARD)
-
