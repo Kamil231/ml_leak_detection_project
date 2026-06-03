@@ -108,7 +108,6 @@ def stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h):
     
     wn = SIMULATION_CONFIG.create_network_real()
     sim = wntr.sim.WNTRSimulator(wn)
-    #ref_sim = sim.run_sim()
     pipe_names = wn.pipe_name_list
     dfs_list = []
 
@@ -171,10 +170,6 @@ def stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h):
     bp_signals = get_blueprint_signals()
     df_combined = pd.merge(bp_signals, signal_final, on=['T', 'Node'], how='outer')
 
-
-    # df_combined['T'] = df_combined['T'] / 3600
-    # signal_final['T'] = signal_final['T'] / 3600
-
     outlier_scenarios = return_outlier_scenario(df_combined, times_of_failure_h)
     
     if outlier_scenarios is not None:
@@ -182,11 +177,8 @@ def stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h):
         outlier_pipes = metadata_df.loc[metadata_df['is_outlier']]['leak_location'].tolist()
         metadata_df.loc[metadata_df['leak_location'].isin(outlier_pipes), 'is_outlier'] = True
 
-
     # metadata_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'scenario_metadata.csv')
     metadata_df.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'scenario_metadata.pkl')
-
-    # df_combined = df_combined[df_combined['Node'].isin(wn.node_name_list)]
 
     # df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_with_bp.csv')
     df_combined.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_with_bp.pkl')
@@ -205,7 +197,6 @@ def run_single_leak(ldp, tofh, pipe_to_fail):
 
     wn.options.hydraulic.demand_model = 'PDD' 
 
-    # Konfiguracja wycieku
     pipe = wn.get_link(pipe_to_fail)
     leak_diameter = pipe.diameter * ldp
     leak_area = np.pi * (leak_diameter / 2)**2
@@ -217,26 +208,20 @@ def run_single_leak(ldp, tofh, pipe_to_fail):
     sim_base = wntr.sim.WNTRSimulator(wn_base)
     results_base = sim_base.run_sim()
 
-    #wn = get_alt_demand_wn(wn) 
-
     leak_node = wn.get_node(node_name)
     leak_node.add_leak(wn, 
                        area=leak_area,
                        start_time=start_time_s,
                        end_time=end_time_s)
     
-    
-    # sim = wntr.sim.WNTRSimulator(wn)
     sim_leak = wntr.sim.WNTRSimulator(wn)
     results_leak = sim_leak.run_sim()
 
     residuals_matrix = results_base.node['pressure'] - results_leak.node['pressure']
-        
-    # Konwersja do "długiego formatu"
+
     res_df = residuals_matrix.stack().reset_index()
     res_df.columns = ['T', 'Node', 'Pressure_Residual']
     
-    # Dodanie metadanych
     res_df['leak_diameter_parameter'] = ldp
     res_df['time_of_failure_h'] = tofh
     res_df['leak_location'] = pipe_to_fail
@@ -253,8 +238,6 @@ def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_fa
 
     tasks = list(itertools.product(leak_diameter_parameters, times_of_failure_h, pipe_names))
 
-    # print('tasks[1]: ', tasks[1])
-    # print('type(tasks[1]): ', type(tasks[1]))
     t_dict = defaultdict(list)
 
     for index, task in enumerate(tasks):
@@ -297,9 +280,6 @@ def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_fa
     bp_signals = get_blueprint_signals()
     df_combined = pd.merge(bp_signals, signal_final, on=['T', 'Node'], how='outer')
 
-    # df_combined['T'] = df_combined['T'] / 3600
-    # signal_final['T'] = signal_final['T'] / 3600
-
     # df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_with_bp.csv')
     df_combined.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_with_bp.pkl')
 
@@ -309,7 +289,6 @@ def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_fa
         metadata_df['is_outlier'] = metadata_df['Scenario_Name'].isin(outlier_scenarios)
         outlier_pipes = metadata_df.loc[metadata_df['is_outlier']]['leak_location'].tolist()
         metadata_df.loc[metadata_df['leak_location'].isin(outlier_pipes), 'is_outlier'] = True
-
 
     # metadata_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'scenario_metadata.csv')
     metadata_df.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'scenario_metadata.pkl')

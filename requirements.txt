@@ -1,0 +1,18 @@
+wntr
+#pandas 2, poniewaz pandas 3 nie dziala z biblioteka chama
+pandas==2.3.3
+numpy
+tqdm
+matplotlib
+streamlit
+plotly
+#TODO: zmodyfikowac kod tak zeby dzialal z nowa wersja scikit-learn
+scikit-learn==1.8.0
+xgboost
+joblib
+chama
+tqdm-joblib
+PyYAML
+torch
+seaborn
+lightgbm

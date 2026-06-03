@@ -2,13 +2,6 @@ import streamlit as st
 import pickle
 from src.config import SIMULATION_CONFIG
 import wntr
-from display_XGBoost import display_XGBoost
-from display_LightGBM import display_LightGBM
-from display_NN import display_NN
-from display_Chama import display_Chama
-from display_network_map import display_network_map
-from display_nodes_parameters import display_nodes_parameters
-from display_signals import display_signals
 from pathlib import Path
 import streamlit as st
 import matplotlib.pyplot as plt

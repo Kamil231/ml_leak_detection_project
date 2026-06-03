@@ -66,7 +66,6 @@ def run_chama_simulation(leak_diameter_parameters, times_of_failure_h):
 
     scenario_metadata = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle/scenario_metadata.pkl')   
     cols_to_drop = scenario_metadata.loc[scenario_metadata['is_outlier']]['Scenario_Name'].tolist()
-    # print('cols_to_drop: ', cols_to_drop)
     signal_input = signal_input.drop(columns=cols_to_drop)
 
     thresholds_series = get_1sigma_threshold()
@@ -127,20 +126,14 @@ def run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h):
 
     scenario_metadata = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle/scenario_metadata.pkl')   
     cols_to_drop = scenario_metadata.loc[scenario_metadata['is_outlier']]['Scenario_Name'].tolist()
-    # print('cols_to_drop: ', cols_to_drop)
-    # print('before: ', signal_input.columns.tolist())
     signal_input = signal_input.drop(columns=cols_to_drop)
-    # print('after: ', signal_input.columns.tolist())
-
-    # print(f"Signal shape: {signal_input.shape}")
-    # print("signal_input:\n",signal_input)
 
     if signal_input.empty:
         print("WARNING: signal_input is empty! Optimization will do nothing.")
         return
 
     def optimize_for_budget(n):
-        #import warnings
+        
         warnings.filterwarnings("ignore")
         wn_local = SIMULATION_CONFIG.create_network_real()
         res_impact, s_dict_i = sensors_ImpactFormulation.get_sensor_locations(

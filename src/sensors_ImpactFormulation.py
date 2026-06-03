@@ -21,12 +21,9 @@ import pickle
 
 def get_sensor_locations(wn, signal, threshold_parameters, thresholds_series, sensor_budget):
 
-    #scenario_names = signal.columns.tolist()[2:]
     scenario_names = [col for col in signal.columns if col not in ['T', 'Node']]
     sensor_names = wn.junction_name_list
     sample_times = np.arange(0, wn.options.time.duration, wn.options.time.hydraulic_timestep)
-
-    # thresholds_series = get_1sigma_threshold()
 
     sensors = {}
     sensors_thp_dict = {}
@@ -74,9 +71,8 @@ def get_sensor_locations(wn, signal, threshold_parameters, thresholds_series, se
 
     scenario_characteristics = pd.DataFrame({'Scenario': scenario_names,
                                              'Undetected Impact': sample_times.max()*1.5})
-    #sensor_characteristics = pd.DataFrame({'Sensor': sensor_names,'Cost': 1})
-    sensor_characteristics = pd.DataFrame(cost_data_list)
 
+    sensor_characteristics = pd.DataFrame(cost_data_list)
 
     impactform = chama.optimize.ImpactFormulation()
     model = impactform.create_pyomo_model(impact=min_det_time, sensor=sensor_characteristics, scenario=scenario_characteristics)

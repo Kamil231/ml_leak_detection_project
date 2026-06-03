@@ -22,12 +22,9 @@ from src.get_3sigma_threshold import get_1sigma_threshold
 
 def get_sensor_locations(wn, signal, threshold_parameters, thresholds_series, sensor_budget):
 
-    #scenario_names = signal.columns.tolist()[2:]
     scenario_names = [col for col in signal.columns if col not in ['T', 'Node']]
     sensor_names = wn.junction_name_list
     sample_times = np.arange(0, wn.options.time.duration, wn.options.time.hydraulic_timestep)
-
-    # thresholds_series = get_1sigma_threshold()
 
     sensors = {}
     sensors_thp_dict = {}
@@ -61,7 +58,7 @@ def get_sensor_locations(wn, signal, threshold_parameters, thresholds_series, se
 
     scenario_characteristics = pd.DataFrame({'Scenario': scenario_names,
                                              'Undetected Impact': sample_times.max()*1.5})
-    #sensor_characteristics = pd.DataFrame({'Sensor': sensor_names,'Cost': 1})
+
     sensor_characteristics = pd.DataFrame(cost_data_list)
 
     coverage_df = min_det_time.groupby('Sensor')['Scenario'].apply(list).reset_index()
@@ -72,7 +69,6 @@ def get_sensor_locations(wn, signal, threshold_parameters, thresholds_series, se
     results = {}
 
     coverage_percent_list = []
-
 
     coverageform = chama.optimize.CoverageFormulation()
     model = coverageform.create_pyomo_model(coverage=coverage_df,
@@ -85,9 +81,7 @@ def get_sensor_locations(wn, signal, threshold_parameters, thresholds_series, se
         filtered_group = [s for s in sensor_group if s in valid_sensors]
         if filtered_group:
             coverageform.add_grouping_constraint(filtered_group, max_select=1)
-        #coverageform.add_grouping_constraint(sensor_group, max_select=1)
-
-
+            
     coverageform.solve_pyomo_model(sensor_budget=sensor_budget)
     results = coverageform.create_solution_summary()
 

@@ -32,6 +32,7 @@ def generate_leak_signals():
         on='Scenario_Name',
         how='left'
     )
+
     return signals_long
 
 def generate_bp_signals(seed_offset = 0):
@@ -55,9 +56,8 @@ def generate_bp_signals(seed_offset = 0):
     return signal_final
 
 def get_sensors_list_chama():
+    
     chama_outputs = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'chama_outputs.pkl')
-    # result = chama_outputs.loc[(chama_outputs['Budget'] == 4) & (chama_outputs['Formulation'] == 'CoverageFormulation')]
-    # sensors = result['Result'].item()['Sensors']
     sensors_picked_rows = []
 
     for row in chama_outputs.iterrows():
