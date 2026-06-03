@@ -100,7 +100,7 @@ def return_outlier_scenario(df_signals, tof_list):
     
     unique_outlier_scenarios = list(set([sublist[0][0] for sublist in outlier_scenarios if sublist]))
 
-    print('unique_outlier_scenarios: ', unique_outlier_scenarios)
+    print('outlier_scenarios: ', unique_outlier_scenarios)
     
     return unique_outlier_scenarios
 
@@ -183,19 +183,13 @@ def stochastic_simulation_signals(leak_diameter_parameters, times_of_failure_h):
         metadata_df.loc[metadata_df['leak_location'].isin(outlier_pipes), 'is_outlier'] = True
 
 
-    metadata_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'scenario_metadata.csv')
+    # metadata_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'scenario_metadata.csv')
     metadata_df.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'scenario_metadata.pkl')
 
-    df_combined = df_combined[df_combined['Node'].isin(wn.node_name_list)]
+    # df_combined = df_combined[df_combined['Node'].isin(wn.node_name_list)]
 
-    df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_with_bp.csv')
+    # df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_with_bp.csv')
     df_combined.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_with_bp.pkl')
-
-    # oflitrowuje wirtualne wezly
-    signal_final = signal_final[signal_final['Node'].isin(wn.node_name_list)]
-
-    signal_final.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals.csv')
-    signal_final.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
 
     return signal_final
  
@@ -306,10 +300,7 @@ def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_fa
     # df_combined['T'] = df_combined['T'] / 3600
     # signal_final['T'] = signal_final['T'] / 3600
 
-    signal_final.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_p.csv')
-    signal_final.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
-
-    df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_with_bp.csv')
+    # df_combined.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_with_bp.csv')
     df_combined.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_with_bp.pkl')
 
     outlier_scenarios = return_outlier_scenario(df_combined, times_of_failure_h)
@@ -320,7 +311,7 @@ def stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_fa
         metadata_df.loc[metadata_df['leak_location'].isin(outlier_pipes), 'is_outlier'] = True
 
 
-    metadata_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'scenario_metadata.csv')
+    # metadata_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'scenario_metadata.csv')
     metadata_df.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'scenario_metadata.pkl')
 
     signal_final = signal_final[signal_final['Node'].isin(wn.node_name_list)]

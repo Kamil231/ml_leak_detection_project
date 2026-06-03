@@ -1,118 +1,22 @@
 import pandas as pd
 import xgboost as xgb
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import confusion_matrix
 import numpy as np
 from src.config import SIMULATION_CONFIG
-import wntr
 from tqdm import tqdm
 from sklearn.metrics import roc_curve
 import pickle
-from pprint import pprint
 from joblib import Parallel, delayed
-
-signal_leak_long = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
-scenario_metadata = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'scenario_metadata.pkl')
-
-def generate_bp_signals(seed_offset = 0):
-    
-    wn_base = SIMULATION_CONFIG.create_network_base()
-    sim_base = wntr.sim.WNTRSimulator(wn_base)
-    results_base = sim_base.run_sim()
-
-    wn = SIMULATION_CONFIG.create_network_real(seed_offset)
-    sim_real = wntr.sim.WNTRSimulator(wn)
-    results_real = sim_real.run_sim()
-
-    residuals_matrix = results_base.node['pressure'] - results_real.node['pressure']                    
-    residuals_stacked = residuals_matrix.stack()
-    scenario_name = f'blueprint_scenario_{seed_offset}'
-    residuals_stacked.name = scenario_name
-
-    signal_final = residuals_stacked.reset_index()
-    signal_final.rename(columns={'level_0': 'T', 'level_1': 'Node'}, inplace=True) 
-
-    signal_final = signal_final.pivot_table(
-        index='T',
-        columns='Node',
-        values=scenario_name
-    )
-
-    signal_final.columns.name = None
-    signal_final = signal_final.reset_index()
-    signal_final['Scenario_Name'] = scenario_name
-
-    old_cols = list(signal_final.columns)
-    old_cols.remove('Scenario_Name')
-    old_cols.remove('T')
-    new_order = ['Scenario_Name', 'T'] + old_cols
-    signal_final = signal_final[new_order]
-
-    return signal_final
-
-def get_signals_df():
-
-    max_seed = 2000
-
-    signal_leak_wide = signal_leak_long.melt(
-        id_vars=['T', 'Node'], 
-        var_name='Scenario_Name', 
-        value_name='Signal_Value'
-    )
-
-    signal_leak_wide_with_meta = pd.merge(
-        signal_leak_wide, 
-        scenario_metadata, 
-        on='Scenario_Name', 
-        how='left'
-    )
-
-    signal_leak_wide_with_meta['leak_diameter_parameter'] = signal_leak_wide_with_meta['leak_diameter_parameter'].round(4)
-
-    signal_leak_wide_with_meta = signal_leak_wide_with_meta[signal_leak_wide_with_meta['is_outlier'] == False]
-
-    signal_leak_wide_final = signal_leak_wide_with_meta.pivot_table(
-        index=[
-            'Scenario_Name', 
-            'leak_diameter_parameter', 
-            'time_of_failure_h', 
-            'leak_location', 
-            'is_outlier',
-            'T'
-        ],
-        columns='Node',
-        values='Signal_Value'
-    ).reset_index()
-
-    signal_leak_wide_final.columns = [str(col) for col in signal_leak_wide_final.columns]
-
-    signal_leak_wide_final['Is_Leak'] = (signal_leak_wide_final['T'] > (signal_leak_wide_final['time_of_failure_h'] * 3600)).astype(int)
-
-    results_list = Parallel(n_jobs=-1)(
-        delayed(generate_bp_signals)(seed) 
-        for seed in tqdm(range(max_seed), desc="Parallel WNTR Base Simulations")
-    )
-
-    df_temp = pd.concat(results_list, axis=0, ignore_index=True)
-
-    df_temp['Is_Leak'] = 0
-
-    df_final = pd.concat([signal_leak_wide_final, df_temp], axis=0, ignore_index=True)
-
-    df_final.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'signals_dataset_XGB.csv')
-    df_final.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_dataset_XGB.pkl')
-
-    return df_final
 
 def XGBoost_analysis_all_nodes():
 
-    df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_dataset_XGB.pkl')
+    df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_ml_dataset.pkl')
 
     y = df_signals['Is_Leak']
 
     metadata_cols = ['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T', 'Is_Leak']
     metadata = df_signals[['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T']]
-    print('df_signals[\'leak_diameter_parameter\'].unique(): ', df_signals['leak_diameter_parameter'].unique())
 
     leak_diameter_parameters = df_signals['leak_diameter_parameter'].unique().tolist()
     leak_diameter_parameters.append('All')
@@ -160,7 +64,8 @@ def XGBoost_analysis_all_nodes():
             learning_rate=0.1,        
             scale_pos_weight=class_weight,
             random_state=42,
-            eval_metric='logloss'
+            eval_metric='logloss',
+            n_jobs=1
         )
 
         model_xgb.fit(X_train, y_train)
@@ -169,8 +74,6 @@ def XGBoost_analysis_all_nodes():
 
         metadata_test['Leak_Probability'] = probabilities
         metadata_test['True_Is_Leak'] = y_test
-
-        # col_names = ["TP", "FP", "TN", "FN"]
 
         decision_thresholds = [round(x * 0.1, 1) for x in range(1, 10)]
 
@@ -193,7 +96,7 @@ def XGBoost_analysis_all_nodes():
                 'FN': int(fn)
                 })
 
-    pickle_output_confusion_matrix_df = SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_df.pkl'
+    pickle_output_confusion_matrix_df = SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_df_xgb.pkl'
     csv_output_confusion_matrix_df = SIMULATION_CONFIG.output_folder / 'csv' / 'confusion_matrix_df.csv'
 
     results_df = pd.DataFrame(results_list)
@@ -201,11 +104,11 @@ def XGBoost_analysis_all_nodes():
     with open(pickle_output_confusion_matrix_df, 'wb') as file:
         pickle.dump(results_df, file)
 
-    results_df.to_csv(csv_output_confusion_matrix_df)
+    # results_df.to_csv(csv_output_confusion_matrix_df)
 
 def XGBoost_analysis_best_nodes():
 
-    df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_dataset_XGB.pkl')
+    df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_ml_dataset.pkl')
 
     y = df_signals['Is_Leak']
 
@@ -214,13 +117,9 @@ def XGBoost_analysis_best_nodes():
     
     unique_leaks = [x for x in df_signals['leak_diameter_parameter'].unique() if pd.notna(x)]
     leak_diameter_parameters = unique_leaks + ['All']
-    
-    print('Liczba wyciekow: ', leak_diameter_parameters)
 
     initial_nodes = [c for c in df_signals.columns if c not in metadata_cols]
     nodes_number = len(initial_nodes) 
-
-    print('Liczba węzłów: ', nodes_number)
 
     results_list = []
     importances_list = []
@@ -269,7 +168,7 @@ def XGBoost_analysis_best_nodes():
                 scale_pos_weight=class_weight,
                 random_state=42,
                 eval_metric='logloss',
-                n_jobs=-1
+                n_jobs=1
             )
 
             model_xgb.fit(X_train, y_train)
@@ -316,24 +215,22 @@ def XGBoost_analysis_best_nodes():
                     'FN': int(fn)
                 })
 
-    print("\nZapisuję wyniki końcowe...")
-    pickle_output_confusion_matrix_df = SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_best_nodes_df.pkl'
+    pickle_output_confusion_matrix_df = SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_best_nodes_df_xgb.pkl'
     csv_output_confusion_matrix_df = SIMULATION_CONFIG.output_folder / 'csv' / 'confusion_matrix_best_nodes_df.csv'
 
     results_df = pd.DataFrame(results_list)
     with open(pickle_output_confusion_matrix_df, 'wb') as file:
         pickle.dump(results_df, file)
-    results_df.to_csv(csv_output_confusion_matrix_df, index=False)
+    # results_df.to_csv(csv_output_confusion_matrix_df, index=False)
 
     if importances_list:
         importances_df = pd.concat(importances_list, ignore_index=True)
-        pickle_output_nodes = SIMULATION_CONFIG.output_folder / 'pickle' / 'top_nodes_xgb.pkl'
+        pickle_output_nodes = SIMULATION_CONFIG.output_folder / 'pickle' / 'best_nodes_xgb.pkl'
         csv_output_nodes = SIMULATION_CONFIG.output_folder / 'csv' / 'top_nodes_xgb.csv'
         
         with open(pickle_output_nodes, 'wb') as file:
             pickle.dump(importances_df, file)
-        importances_df.to_csv(csv_output_nodes, index=False)
-        print("Wszystkie pliki zostały pomyślnie zapisane!")
+        # importances_df.to_csv(csv_output_nodes, index=False)
 
 # XGBoost_analysis_all_nodes()
 # XGBoost_analysis_best_nodes()

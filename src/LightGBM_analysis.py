@@ -9,7 +9,7 @@ import pickle
 
 def LightGBM_analysis_all_nodes():
 
-    df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_dataset_XGB.pkl')
+    df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_ml_dataset.pkl')
     y = df_signals['Is_Leak']
 
     metadata_cols = ['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T', 'Is_Leak']
@@ -28,8 +28,7 @@ def LightGBM_analysis_all_nodes():
 
         X_filtered = df_signals.loc[mask].copy().drop(columns=metadata_cols, errors='ignore')
         y_filtered = y.loc[mask].copy()
-        
-        # Podział na zbiory
+
         unique_scenarios = df_signals.loc[mask, 'Scenario_Name'].unique()
         train_scenarios, test_scenarios = train_test_split(unique_scenarios, test_size=0.3, random_state=42)
         
@@ -44,13 +43,14 @@ def LightGBM_analysis_all_nodes():
         model_lgb = lgb.LGBMClassifier(
             n_estimators=100,
             max_depth=5,
-            num_leaves=31, # Kluczowe dla LGBM przy max_depth=5
+            num_leaves=31, 
             learning_rate=0.1,
             scale_pos_weight=class_weight,
             random_state=42,
-            n_jobs=-1,
+            n_jobs=1,
             verbosity=-1
         )
+
 
         model_lgb.fit(X_train, y_train)
         probs = model_lgb.predict_proba(X_test)[:, 1]
@@ -65,12 +65,12 @@ def LightGBM_analysis_all_nodes():
             })
 
     results_df = pd.DataFrame(results_list)
-    results_df.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_lgb.pkl')
-    results_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'confusion_matrix_lgb.csv')
+    results_df.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_df_lgb.pkl')
+    # results_df.to_csv(SIMULATION_CONFIG.output_folder / 'csv' / 'confusion_matrix_df_lgb.csv')
 
 def LightGBM_analysis_best_nodes():
 
-    df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_dataset_XGB.pkl')
+    df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_ml_dataset.pkl')
     y = df_signals['Is_Leak']
     metadata_cols = ['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T', 'Is_Leak']
 
@@ -101,11 +101,13 @@ def LightGBM_analysis_best_nodes():
         class_weight = np.sum(y_train == 0) / np.sum(y_train == 1) if np.sum(y_train == 1) > 0 else 1
 
         dropped_nodes = []
+
         for budget in tqdm(range(nodes_number, 0, -1), desc=f"Budgeting {leak_diameter}", leave=False):
+            
             X_tr = X_train_base.drop(columns=dropped_nodes, errors='ignore')
             X_ts = X_test_base.drop(columns=dropped_nodes, errors='ignore')
 
-            model = lgb.LGBMClassifier(n_estimators=100, max_depth=5, num_leaves=31, scale_pos_weight=class_weight, random_state=42, n_jobs=-1, verbosity=-1)
+            model = lgb.LGBMClassifier(n_estimators=100, max_depth=5, num_leaves=31, scale_pos_weight=class_weight, random_state=42, n_jobs=1, verbosity=-1)
             model.fit(X_tr, y_train)
             
             probs = model.predict_proba(X_ts)[:, 1]
@@ -125,9 +127,8 @@ def LightGBM_analysis_best_nodes():
                 tn, fp, fn, tp = confusion_matrix(y_test, (probs >= th).astype(int)).ravel()
                 results_list.append({'leak_diameter_parameter': leak_diameter, 'decision_threshold': th, 'budget': budget, 'TP': int(tp), 'FP': int(fp), 'TN': int(tn), 'FN': int(fn)})
 
-    pd.DataFrame(results_list).to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_best_nodes_lgb.pkl')
-    pd.concat(importances_list).to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'top_nodes_lgb.pkl')
+    pd.DataFrame(results_list).to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_best_nodes_df_lgb.pkl')
+    pd.concat(importances_list).to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'best_nodes_lgb.pkl')
 
-# if __name__ == "__main__":
-#     LightGBM_analysis_all_nodes()
-#     LightGBM_analysis_best_nodes()
+# LightGBM_analysis_all_nodes()
+# LightGBM_analysis_best_nodes()

@@ -7,8 +7,14 @@ from src.alter_demand_model import get_alt_demand_wn
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = BASE_DIR / 'output_folder'
-OUTPUT_DIR.mkdir(exist_ok=True)
 
+OUTPUT_DIR.mkdir(exist_ok=True)
+(OUTPUT_DIR / 'csv').mkdir(exist_ok=True)
+(OUTPUT_DIR / 'pickle').mkdir(exist_ok=True)
+
+@dataclass
+class DatasetParameters:
+    number_of_BP_scenarios:int
 
 
 @dataclass
@@ -38,6 +44,7 @@ class SimulationConfig:
     time: TimeParameters
     network: WaterNetworkParameters
     scenarios: ScenariosParameters
+    dataset_parameters: DatasetParameters
     
     def create_network_real(self, seed_offset = 0)-> wntr.network.WaterNetworkModel:
         
@@ -65,7 +72,6 @@ class SimulationConfig:
         
         return wn
 
-
 SIMULATION_CONFIG = SimulationConfig(
     #output_folder = 'output_folder',
     output_folder = OUTPUT_DIR,
@@ -87,5 +93,8 @@ SIMULATION_CONFIG = SimulationConfig(
         sigma3_sim_number = 30,
         #sensor_budget = list(range(1,16)) # + list(range(10, 160, 1))
         sensor_budget = list(range(1,21)) # + list(range(10, 160, 1))
+    ),
+    dataset_parameters=DatasetParameters(
+        number_of_BP_scenarios = 120
     )
 )

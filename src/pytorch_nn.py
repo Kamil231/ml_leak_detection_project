@@ -77,7 +77,7 @@ def run_nn(X_train, y_train, parallel = False):
 
 def nn_analysis():
 
-	df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_dataset_XGB.pkl')
+	df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_ml_dataset.pkl')
 
 	metadata_cols = ['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T', 'Is_Leak']
 	metadata = df_signals[['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T']]
@@ -177,7 +177,7 @@ def nn_analysis():
 
 	torch.save(model_dict, pth_nn_models_dict)
 
-	results_df.to_csv(csv_output_confusion_matrix_df)
+	# results_df.to_csv(csv_output_confusion_matrix_df)
 
 def process_single_leak(leak_diameter_parameter, df_signals, metadata, X, y):
 
@@ -246,7 +246,7 @@ def process_single_leak(leak_diameter_parameter, df_signals, metadata, X, y):
 
 def nn_analysis_parallel():
 
-    df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_dataset_XGB.pkl')
+    df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_ml_dataset.pkl')
 
     metadata_cols = ['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T', 'Is_Leak']
     metadata = df_signals[['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T']]
@@ -282,7 +282,7 @@ def nn_analysis_parallel():
     with open(pickle_output_confusion_matrix_df, 'wb') as file:
         pickle.dump(results_df, file)
 
-    results_df.to_csv(csv_output_confusion_matrix_df, index=False)
+    # results_df.to_csv(csv_output_confusion_matrix_df, index=False)
     
     torch.save(model_dict, pth_nn_models_dict)
 
@@ -311,7 +311,7 @@ def auc_scorer(estimator, X, y):
 
 def NN_pick_best_nodes():
 
-	df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_dataset_XGB.pkl')
+	df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_ml_dataset.pkl')
 	pth_nn_models_dict = SIMULATION_CONFIG.output_folder / 'pickle' / 'nn_models_dict.pth'
 
 	metadata_cols = ['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T', 'Is_Leak']
@@ -389,13 +389,13 @@ def NN_pick_best_nodes():
 
 	importance_df = importance_df.sort_values(by='Importance_Mean', ascending=False).reset_index(drop=True)
 
-	pickle_output_nodes = SIMULATION_CONFIG.output_folder / 'pickle' / 'top_nodes_nn.pkl'
+	pickle_output_nodes = SIMULATION_CONFIG.output_folder / 'pickle' / 'best_nodes_nn.pkl'
 	csv_output_nodes = SIMULATION_CONFIG.output_folder / 'csv' / 'top_nodes_nn.csv'
 
 	with open(pickle_output_nodes, 'wb') as file:
 		pickle.dump(importance_df, file)
 
-	importance_df.to_csv(csv_output_nodes, index=False)
+	# importance_df.to_csv(csv_output_nodes, index=False)
 
 	return importance_df
 
@@ -404,11 +404,11 @@ def NN_analysis_best_nodes():
 	importance_df = NN_pick_best_nodes()
 
 	min_budget = 1
-	max_budget = 2
+	max_budget = 20
 
 	budget_list = list(range(min_budget, max_budget + 1))
 
-	df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_dataset_XGB.pkl')
+	df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_ml_dataset.pkl')
 
 	metadata_cols = ['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T', 'Is_Leak']
 	metadata = df_signals[['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T']]
@@ -438,7 +438,7 @@ def NN_analysis_best_nodes():
 				results_list.extend(local_results)
 
 
-	pickle_output_confusion_matrix_df = SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_df_nn_top_nodes.pkl'
+	pickle_output_confusion_matrix_df = SIMULATION_CONFIG.output_folder / 'pickle' / 'confusion_matrix_best_nodes_df_nn.pkl'
 	csv_output_confusion_matrix_df = SIMULATION_CONFIG.output_folder / 'csv' / 'confusion_matrix_df_nn_top_nodes.csv'
 
 	results_df = pd.DataFrame(results_list)
@@ -446,4 +446,8 @@ def NN_analysis_best_nodes():
 	with open(pickle_output_confusion_matrix_df, 'wb') as file:
 	    pickle.dump(results_df, file)
 
-	results_df.to_csv(csv_output_confusion_matrix_df, index=False)
+	# results_df.to_csv(csv_output_confusion_matrix_df, index=False)
+
+
+# nn_analysis_parallel()
+# NN_analysis_best_nodes()

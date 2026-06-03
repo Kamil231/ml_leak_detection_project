@@ -98,24 +98,22 @@ def run_chama_simulation(leak_diameter_parameters, times_of_failure_h):
     chama_outputs = pd.DataFrame(chama_outputs_temp_list)
 
 
-    with open(SIMULATION_CONFIG.output_folder / 'pickle' / 'chama_outputs_s.pkl', 'wb') as f:
+    with open(SIMULATION_CONFIG.output_folder / 'pickle' / 'chama_outputs.pkl', 'wb') as f:
         pickle.dump(chama_outputs, f)
 
-    with open(SIMULATION_CONFIG.output_folder / 'pickle' / 'sensors_thp_dict_s.pkl', 'wb') as f:
+    with open(SIMULATION_CONFIG.output_folder / 'pickle' / 'sensors_thp_dict.pkl', 'wb') as f:
         pickle.dump(sensors_thp_dict, f)
 
     precision_recall_data = get_precision_recall_data()
     precision_recall_data.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'precision_recall_data_chama.pkl')
-
-    print("Simulation ended.")
 
 def run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h):
     threshold_parameters = [3]
     output_base = Path(SIMULATION_CONFIG.output_folder)
     pickle_path = output_base / "pickle"
     csv_path = output_base / "csv"
-    pickle_path.mkdir(parents=True, exist_ok=True)
-    csv_path.mkdir(parents=True, exist_ok=True)
+    # pickle_path.mkdir(parents=True, exist_ok=True)
+    # csv_path.mkdir(parents=True, exist_ok=True)
 
     thresholds_series = get_1sigma_threshold()
 
@@ -123,7 +121,6 @@ def run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h):
     # nodal_thresholds_dict = get_xsigma_threshold_dict(threshold_parameters)
     # pd.DataFrame(nodal_thresholds_dict).to_csv(csv_path / "nodal_thresholds.csv")
 
-    print("--- Generating signals ---")
     signal = stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_failure_h)
     #signal_input = signal.drop(columns=['leak_diameter_parameter', 'time_of_failure_h']).copy()
     signal_input = signal.copy()
@@ -196,5 +193,3 @@ def run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h):
 
     precision_recall_data = get_precision_recall_data()
     precision_recall_data.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'precision_recall_data_chama.pkl')
-
-    print(f"--- Completed. Results in: {output_base.absolute()} ---")

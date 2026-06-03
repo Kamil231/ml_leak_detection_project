@@ -94,6 +94,7 @@ def dipslay_roc_curve(unique_leaks, cm, description):
 		        )
 
 def display_precision_recall_f1(unique_leaks, cm):
+	
 	with st.expander("Krzywa Precision-Recall oraz F1 Score"):
 
 		st.markdown("### Krzywa Precision-Recall")
@@ -342,7 +343,7 @@ def display_ml_results(cm_all_nodes, cm_best_nodes, wn, description, best_nodes)
 
 		with st.expander("Wybor najlepszych wezlow i thresholdow"):
 
-			top_nodes_path = SIMULATION_CONFIG.output_folder / 'pickle' / 'top_nodes_xgb.pkl'
+			top_nodes_path = SIMULATION_CONFIG.output_folder / 'pickle' / 'best_nodes_xgb.pkl'
 
 			# max_budget = best_nodes['budget'].max()
 			# min_budget = best_nodes['budget'].min()
@@ -385,21 +386,6 @@ def display_ml_results(cm_all_nodes, cm_best_nodes, wn, description, best_nodes)
 				lambda x: str(round(x, 2)) if isinstance(x, (float, int)) and pd.notna(x) else str(x)
 			)
 
-			# if 'budget' in best_nodes.columns:
-			# 	df_selected_sensors = best_nodes.loc[(best_nodes['leak_diameter_parameter'] == selected_leak_dia) & (best_nodes['budget'] == budget)]
-			# 	df_selected_sensors = df_selected_sensors.sort_values(by="Importance", ascending=False)
-			# 	df_selected_sensors = df_selected_sensors.reset_index(drop=True)
-
-			# 	df_selected_sensors['Importance No'] = range(1, len(df_selected_sensors) + 1)
-			# 	df_selected_sensors = df_selected_sensors.set_index('Importance No')
-			# else:
-			# 	df_selected_sensors = loaded_top_nodes.loc[(loaded_top_nodes['leak_diameter_parameter'] == selected_leak_dia)]
-			# 	df_selected_sensors = df_selected_sensors.sort_values(by='Importance_Mean', ascending=False).reset_index(drop=True)
-			# 	df_selected_sensors = df_selected_sensors.head(budget)
-			# 	df_selected_sensors = df_selected_sensors.set_index('Importance_Mean')
-
-
-
 			display_results_table(best_nodes, selected_leak_dia, budget)
 
 			display_precision_recall_f1(unique_leaks, cm_best_nodes_budget)
@@ -410,5 +396,3 @@ def display_ml_results(cm_all_nodes, cm_best_nodes, wn, description, best_nodes)
 
 			display_sensors_map(best_nodes, selected_leak_dia, budget, wn)
 
-
-# display_ml_results(confusion_matrix_df_XGB, confusion_matrix_best_nodes_df_XGB, wn, 'xgb', best_nodes_xgb)

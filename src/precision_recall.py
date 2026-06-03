@@ -7,12 +7,17 @@ from src.stochastic_simulation_signals import stochastic_simulation_signals_para
 import pandas as pd
 import re
 from tqdm import tqdm
-from tqdm.contrib.concurrent import thread_map
+from tqdm.contrib.concurrent import thread_map, process_map
+from functools import partial
 import numpy as np
 import os
 
 def generate_leak_signals():
-    signal_leak = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals.pkl')
+    
+    signal_leak = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_with_bp.pkl')
+    signal_leak = signal_leak.drop(columns=['blueprint_scenario'])
+
+
     scenario_metadata = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'scenario_metadata.pkl')
 
     signals_leak_melted = signal_leak.melt(
@@ -51,8 +56,8 @@ def generate_bp_signals(seed_offset = 0):
 
 def get_sensors_list_chama():
     chama_outputs = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'chama_outputs.pkl')
-    result = chama_outputs.loc[(chama_outputs['Budget'] == 4) & (chama_outputs['Formulation'] == 'CoverageFormulation')]
-    sensors = result['Result'].item()['Sensors']
+    # result = chama_outputs.loc[(chama_outputs['Budget'] == 4) & (chama_outputs['Formulation'] == 'CoverageFormulation')]
+    # sensors = result['Result'].item()['Sensors']
     sensors_picked_rows = []
 
     for row in chama_outputs.iterrows():
@@ -220,6 +225,9 @@ def get_precision_recall_leak_df(target_leak_diameters, leak_signals, nodal_thre
     precision_recall_data = pd.DataFrame(precision_recall_data_list)
     return precision_recall_data
 
+def _process_target_diameter(target_diameter, leak_signals, nodal_thresholds, sensors_picked, precomputed_bp):
+    return get_precision_recall_leak_df(target_diameter, leak_signals, nodal_thresholds, sensors_picked, precomputed_bp)
+
 def get_precision_recall_data():
 
     leak_signals = generate_leak_signals()
@@ -227,10 +235,7 @@ def get_precision_recall_data():
     nodal_thresholds = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'nodal_thresholds_std.pkl')
     sensors_picked = get_sensors_list_chama()
 
-    print('sensors_picked: ')
-    print('sensors_picked: ')
-
-    precomputed_bp = precompute_bp_signals_dict(max_seed=20)
+    precomputed_bp = precompute_bp_signals_dict(max_seed=SIMULATION_CONFIG.dataset_parameters.number_of_BP_scenarios)
     
     target_leak_diameters = leak_signals['leak_diameter_parameter'].unique().tolist()
 
@@ -239,22 +244,25 @@ def get_precision_recall_data():
         target_leak_diameters_list.append([target_leak_diameter])
     target_leak_diameters_list.append(target_leak_diameters)
 
-    def ex_fun(target_diameter):
-        return get_precision_recall_leak_df(target_diameter, leak_signals, nodal_thresholds, sensors_picked, precomputed_bp)
+    worker_func = partial(
+        _process_target_diameter,
+        leak_signals=leak_signals,
+        nodal_thresholds=nodal_thresholds,
+        sensors_picked=sensors_picked,
+        precomputed_bp=precomputed_bp
+    )
 
-    precision_recall_data_list = thread_map(
-        ex_fun,
+    precision_recall_data_list = process_map(
+        worker_func,
         target_leak_diameters_list,
         max_workers=os.cpu_count(),  
-        desc="Przetwarzanie roznych leak diameter",
-        position=0
+        desc="Przetwarzanie roznych leak diameter"
     )
 
     precision_recall_data = pd.concat(precision_recall_data_list, ignore_index=True)
     return precision_recall_data
 
-def precompute_bp_signals_dict(max_seed=100):
-    print(f"Pre-kalkulacja symulacji WNTR dla scenariuszy tła (seeds: 0 do {max_seed-1})...")
+def precompute_bp_signals_dict(max_seed=120):
     bp_dict = {}
     for seed in tqdm(range(max_seed), desc="WNTR Base Simulations"):
         df_bp = generate_bp_signals(seed)
