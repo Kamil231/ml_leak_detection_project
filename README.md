@@ -19,7 +19,7 @@ Projekt integruje modelowanie hydrauliczne sieci wodociągowych (oparte na silni
 Projekt wymaga języka Python
 
 Dostępne komendy make:
-  make run      - Uruchamia obliczenia (python -m src.main)
-  make install  - Instaluje biblioteki
-  make display  - Uruchamia Streamlit z wykresami
-  make setup_data  - Pobiera dane z przeliczonego programu
+* make run      - Uruchamia obliczenia (python -m src.main)
+* make install  - Instaluje biblioteki
+* make display  - Uruchamia Streamlit z wykresami
+* make setup_data  - Pobiera dane z przeliczonego programu
