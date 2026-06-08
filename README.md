@@ -1,6 +1,6 @@
 # Opracowanie oraz implementacja systemu do detekcji wycieków w sieciach wodociągowych przy wykorzystaniu metod sztucznej inteligencji.
 
-Repozytorium zawiera kod źródłowy stworzony na potrzeby pracy magisterskiej/inżynierskiej pt. *"Opracowanie oraz implementacja systemu do detekcji wycieków w sieciach wodociągowych przy wykorzystaniu metod sztucznej inteligencji."*.
+Repozytorium zawiera kod źródłowy stworzony na potrzeby pracy magisterskiej pt. *"Opracowanie oraz implementacja systemu do detekcji wycieków w sieciach wodociągowych przy wykorzystaniu metod sztucznej inteligencji."*.
 
 Projekt integruje modelowanie hydrauliczne sieci wodociągowych (oparte na silniku EPANET), stochastyczne generowanie profili zużycia wody, optymalizację rozmieszczenia czujników oraz i algorytmy sztucznej inteligencji w celu wczesnego wykrywania i lokalizacji awarii.
 
