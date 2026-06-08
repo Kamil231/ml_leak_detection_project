@@ -17,6 +17,7 @@ help:
 	@echo "  make run      - Uruchamia obliczenia (python -m src.main)"
 	@echo "  make install  - Instaluje biblioteki"
 	@echo "  make display  - Uruchamia Streamlit z wykresami"
+	@echo "  make setup_data  - Pobiera dane z przeliczonego programu"
 
 run:
 	$(PYTHON) -m $(MODULE)
@@ -50,3 +51,10 @@ endif
 
 display:
 	PYTHONPATH=. $(STREAMLIT) run $(DASHBOARD)
+
+setup_data:
+	@echo "Pobieranie danych do wyswietlenia"
+	gdown 1c5LI1aTOf9tRUi_PQWD8O-8m_3VoD4mv -O output_folder.zip
+	@echo "Rozpakowywanie"
+	unzip output_folder.zip
+	rm output_folder.zip
