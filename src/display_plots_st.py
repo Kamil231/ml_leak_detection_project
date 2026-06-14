@@ -3,7 +3,7 @@ import pickle
 from src.config import SIMULATION_CONFIG
 import wntr
 from pathlib import Path
-from display_Chama import display_Chama
+from display_Chama import display_Chama, display_Chama_seperate_leaks
 from display_network_map import display_network_map
 from display_nodes_parameters import display_nodes_parameters
 from display_signals import display_signals
@@ -19,8 +19,10 @@ def load_all_data(base_dir: Path):
         'nodal_thresholds_std': 'nodal_thresholds_std.pkl',
         'sensors_wn_dict': 'sensors_wn_dict.pkl',
 
-        'chama_outputs': 'chama_outputs.pkl',
+        'chama_outputs_single': 'chama_outputs.pkl',
+        'chama_outputs_seperate': 'chama_outputs_seperate.pkl',
         'precision_recall_data_chama': 'precision_recall_data_chama.pkl',
+        'precision_recall_data_chama_seperate': 'precision_recall_data_chama_seperate.pkl',
 
         'cm_nn': 'confusion_matrix_df_nn.pkl',
         'cm_xgb': 'confusion_matrix_df_xgb.pkl',
@@ -61,10 +63,12 @@ def load_simulation_results():
 
 data = load_all_data(PICKLE_DIR)
 
-chama_outputs = data['chama_outputs']
+chama_outputs_single = data['chama_outputs_single']
+chama_outputs_seperate = data['chama_outputs_seperate']
 scenario_metadata = data['scenario_metadata']
 sensors_wn_dict = data['sensors_wn_dict']
 precision_recall_data_chama = data['precision_recall_data_chama']
+precision_recall_data_chama_seperate = data['precision_recall_data_chama_seperate']
 confusion_matrix_df_XGB = data['cm_xgb']
 confusion_matrix_best_nodes_df_XGB = data['cm_best_xgb']
 confusion_matrix_df_LGB = data['cm_lgb']
@@ -87,7 +91,11 @@ display_nodes_parameters(node_name_list, results_real, results_base)
 
 display_network_map(scenario_metadata, wn)
 
-display_Chama(chama_outputs, sensors_wn_dict, wn, precision_recall_data_chama)
+# display_Chama(chama_outputs, sensors_wn_dict, wn, precision_recall_data_chama)
+
+# display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, precision_recall_data_chama_seperate)
+
+display_Chama(chama_outputs_single, sensors_wn_dict, wn, precision_recall_data_chama, chama_outputs_seperate, precision_recall_data_chama_seperate)
 
 display_ml_results(confusion_matrix_df_XGB, confusion_matrix_best_nodes_df_XGB, wn, 'XGB', best_nodes_xgb)
 

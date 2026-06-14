@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 warnings.filterwarnings("ignore", message="pkg_resources is deprecated")
 
 from src.config import SIMULATION_CONFIG
-from src.run_chama_analysis import run_chama_simulation, run_chama_simulation_parallel
+from src.run_chama_analysis import run_chama_simulation, run_chama_simulation_parallel, run_chama_simulation_parallel_seperate_leaks
 import logging
 import numpy as np
 import yaml
@@ -51,22 +51,23 @@ if __name__ == '__main__':
     # times_of_failure_h = [48]
     print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))
 
-    # run_chama_simulation(leak_diameter_parameters, times_of_failure_h)
-    run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h)
+    # run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h)
 
-    get_signals_df()
+    # get_signals_df()
 
-    XGBoost_analysis_all_nodes()
+    # XGBoost_analysis_all_nodes()
 
-    XGBoost_analysis_best_nodes()
+    # XGBoost_analysis_best_nodes()
 
-    LightGBM_analysis_all_nodes()
+    # LightGBM_analysis_all_nodes()
 
-    LightGBM_analysis_best_nodes()
+    # LightGBM_analysis_best_nodes()
 
-    nn_analysis_parallel()
+    # nn_analysis_parallel()
     
-    NN_analysis_best_nodes()
+    # NN_analysis_best_nodes()
+
+    run_chama_simulation_parallel_seperate_leaks(leak_diameter_parameters, times_of_failure_h)
 
     end_time = time.perf_counter()
 

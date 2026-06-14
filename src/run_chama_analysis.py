@@ -29,7 +29,7 @@ from pathlib import Path
 from tqdm_joblib import tqdm_joblib
 import wntr
 from src.get_3sigma_threshold import get_1sigma_threshold
-from src.precision_recall import get_precision_recall_data
+from src.precision_recall import get_precision_recall_data, get_precision_recall_data_seperate
 
 def get_blueprint_signals():
 
@@ -116,7 +116,6 @@ def run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h):
 
     thresholds_series = get_1sigma_threshold()
 
-    wn_local = SIMULATION_CONFIG.create_network_real()
     # nodal_thresholds_dict = get_xsigma_threshold_dict(threshold_parameters)
     # pd.DataFrame(nodal_thresholds_dict).to_csv(csv_path / "nodal_thresholds.csv")
 
@@ -186,3 +185,86 @@ def run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h):
 
     precision_recall_data = get_precision_recall_data()
     precision_recall_data.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'precision_recall_data_chama.pkl')
+
+def run_chama_simulation_parallel_seperate_leaks(leak_diameter_parameters, times_of_failure_h):
+    threshold_parameters = [3]
+    output_base = Path(SIMULATION_CONFIG.output_folder)
+    pickle_path = output_base / "pickle"
+
+    thresholds_series = get_1sigma_threshold()
+
+    #signal = stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_failure_h)
+    signal = pd.read_pickle(pickle_path / 'signals_with_bp.pkl')
+    signal = signal.drop(columns=['blueprint_scenario'])
+    signal_input_full = signal.copy()
+
+    scenario_metadata = pd.read_pickle(pickle_path / 'scenario_metadata.pkl')   
+
+    cols_to_drop = scenario_metadata.loc[scenario_metadata['is_outlier']]['Scenario_Name'].tolist()
+    signal_input_full = signal_input_full.drop(columns=[c for c in cols_to_drop if c in signal_input_full.columns])
+
+    if signal_input_full.empty:
+        print("WARNING: signal_input is empty! Optimization will do nothing.")
+        return
+
+    def optimize_for_budget_ldp(n, sig_in):
+        warnings.filterwarnings("ignore")
+        wn_local = SIMULATION_CONFIG.create_network_real()
+        res_impact, s_dict_i = sensors_ImpactFormulation.get_sensor_locations(
+            wn_local, sig_in, threshold_parameters, thresholds_series, n
+        )
+        res_coverage, s_dict_c = sensors_CoverageFormulation.get_sensor_locations(
+            wn_local, sig_in, threshold_parameters, thresholds_series, n
+        )
+        return n, res_impact, res_coverage, {**s_dict_i, **s_dict_c}
+
+    budgets = SIMULATION_CONFIG.scenarios.sensor_budget
+    chama_outputs_temp_list = []
+    final_sensors_thp_dict = {}
+
+    for ldp in leak_diameter_parameters:
+        print(f"\nRozpoczynam optymalizację Chama dla średnicy wycieku: {ldp}")
+
+        valid_scenarios = scenario_metadata[
+            (scenario_metadata['leak_diameter_parameter'] == ldp) & 
+            (scenario_metadata['is_outlier'] == False)
+        ]['Scenario_Name'].tolist()
+        
+        cols_to_keep = ['T', 'Node'] + [s for s in valid_scenarios if s in signal_input_full.columns]
+        signal_input_ldp = signal_input_full[cols_to_keep].copy()
+
+        if len(cols_to_keep) <= 2:
+            print(f"WARNING: Brak prawidłowych scenariuszy dla ldp={ldp}. Pomijam.")
+            continue
+
+        parallel_pool = Parallel(n_jobs=4)
+
+        with tqdm_joblib(tqdm(desc=f"Optymalizacja budżetów (LDP={ldp})", total=len(budgets))) as pbar:
+            job_generator = (delayed(optimize_for_budget_ldp)(n, signal_input_ldp) for n in budgets)
+            parallel_results = parallel_pool(job_generator)
+
+        for n, res_i, res_c, s_dict in parallel_results:
+            chama_outputs_temp_list.append({
+                'Leak_Diameter': ldp, 
+                'Budget': n,
+                'Formulation': 'ImpactFormulation',
+                'Result': res_i
+            })
+            chama_outputs_temp_list.append({
+                'Leak_Diameter': ldp,
+                'Budget': n,
+                'Formulation': 'CoverageFormulation',
+                'Result': res_c
+            })
+            final_sensors_thp_dict.update(s_dict)
+
+    chama_outputs_seperate = pd.DataFrame(chama_outputs_temp_list)
+
+    with open(pickle_path / "chama_outputs_seperate.pkl", 'wb') as f:
+        pickle.dump(chama_outputs_seperate, f)
+    with open(pickle_path / "sensors_thp_dict_seperate.pkl", 'wb') as f:
+        pickle.dump(final_sensors_thp_dict, f)
+
+    pr_data_seperate = get_precision_recall_data_seperate()
+    pr_data_seperate.to_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'precision_recall_data_chama_seperate.pkl')
+        
