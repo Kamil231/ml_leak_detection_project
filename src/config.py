@@ -16,7 +16,6 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 class DatasetParameters:
     number_of_BP_scenarios:int
 
-
 @dataclass
 class TimeParameters:
     duration_s: int

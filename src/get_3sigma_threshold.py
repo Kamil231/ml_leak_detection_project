@@ -13,7 +13,6 @@ def get_1sigma_threshold(num_runs=100):
 
     all_residuals = []
 
-    #usrednione przebiegi z rzeczywistykm demnad
     for i in tqdm(range(num_runs), desc="Calculating thresholds: "):
 
         wn_real = SIMULATION_CONFIG.create_network_real(seed_offset=i)

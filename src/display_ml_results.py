@@ -99,8 +99,8 @@ def display_precision_recall_f1(unique_leaks, cm):
 		    group_sorted = group.sort_values(by='decision_threshold', ascending=True)
 		    
 		    fig_pr.add_trace(go.Scatter(
-		        x=group_sorted['TPR'], # Recall na osi X
-		        y=group_sorted['Precision'], # Precision na osi Y
+		        x=group_sorted['TPR'], 
+		        y=group_sorted['Precision'], 
 		        mode='lines+markers',
 		        name=f"{leak}",
 		        marker=dict(size=6),
@@ -136,8 +136,8 @@ def display_precision_recall_f1(unique_leaks, cm):
 		    group_sorted = group.sort_values(by='decision_threshold', ascending=True)
 		    
 		    fig_f1.add_trace(go.Scatter(
-		        x=group_sorted['decision_threshold'], # Threshold na osi X
-		        y=group_sorted['F1'],                 # F1-score na osi Y
+		        x=group_sorted['decision_threshold'], 
+		        y=group_sorted['F1'],                 
 		        mode='lines+markers',
 		        name=f"{leak}",
 		        marker=dict(size=6),
@@ -229,9 +229,12 @@ def display_cm(cm, description):
 
 		        st.plotly_chart(fig_cm, use_container_width=True)
 
-def display_results_table(best_nodes, selected_leak_dia, budget):
+def display_results_table(best_nodes, unique_leaks_dia, description, budget):
 
 	with st.expander("Tabea wynikow"):
+
+		selected_leak_dia = st.selectbox("Wybierz Średnicę Wycieku", options=unique_leaks_dia,
+			    key=description+"_leak_dia_table")
 
 		if 'budget' in best_nodes.columns:
 			df_selected_sensors = best_nodes.loc[(best_nodes['leak_diameter_parameter'] == selected_leak_dia) & (best_nodes['budget'] == budget)]
@@ -251,9 +254,12 @@ def display_results_table(best_nodes, selected_leak_dia, budget):
 		    use_container_width=True
 		)
 
-def display_sensors_map(best_nodes, selected_leak_dia, budget, wn):
+def display_sensors_map(best_nodes, unique_leaks_dia, description, budget, wn):
 	
 	with st.expander("Mapa sensorów"): 
+
+		selected_leak_dia = st.selectbox("Wybierz Średnicę Wycieku", options=unique_leaks_dia,
+			    key=description+"_leak_dia_map")
 
 		fig, ax = plt.subplots(figsize=(6, 4))
 
@@ -307,34 +313,34 @@ def get_precision_recall_data(cm):
 
 	return cm, unique_leaks
 
-def display_ml_results(cm_all_nodes, cm_best_nodes, wn, description, best_nodes):
+def display_ml_results(cm_all_nodes, cm_best_nodes, wn, description, best_nodes, cm_global=None, best_nodes_global=None):
 
 	with st.expander(f"Optymalizacja {description} - Wyniki"):
 
-		with st.expander("Model dla wszystkich węzłów"):
+		# with st.expander("Model dla wszystkich węzłów"):
 
-		    cm_all_nodes['TPR'] = cm_all_nodes['TP'] / (cm_all_nodes['TP'] + cm_all_nodes['FN'] + 1e-9)          
-		    cm_all_nodes['FPR'] = cm_all_nodes['FP'] / (cm_all_nodes['FP'] + cm_all_nodes['TN'] + 1e-9)         
-		    cm_all_nodes['Precision'] = cm_all_nodes['TP'] / (cm_all_nodes['TP'] + cm_all_nodes['FP'] + 1e-9)    
+		#     cm_all_nodes['TPR'] = cm_all_nodes['TP'] / (cm_all_nodes['TP'] + cm_all_nodes['FN'] + 1e-9)          
+		#     cm_all_nodes['FPR'] = cm_all_nodes['FP'] / (cm_all_nodes['FP'] + cm_all_nodes['TN'] + 1e-9)         
+		#     cm_all_nodes['Precision'] = cm_all_nodes['TP'] / (cm_all_nodes['TP'] + cm_all_nodes['FP'] + 1e-9)    
 
-		    cm_all_nodes['F1'] = 2 * (cm_all_nodes['Precision'] * cm_all_nodes['TPR']) / (cm_all_nodes['Precision'] + cm_all_nodes['TPR'] + 1e-9)
+		#     cm_all_nodes['F1'] = 2 * (cm_all_nodes['Precision'] * cm_all_nodes['TPR']) / (cm_all_nodes['Precision'] + cm_all_nodes['TPR'] + 1e-9)
 
-		    unique_leaks = sorted(
-		        cm_all_nodes['leak_diameter_parameter'].astype(str).unique(),
-		        key=lambda x: float(x) if x.replace('.', '', 1).isdigit() else float('inf')
-		    )
+		#     unique_leaks = sorted(
+		#         cm_all_nodes['leak_diameter_parameter'].astype(str).unique(),
+		#         key=lambda x: float(x) if x.replace('.', '', 1).isdigit() else float('inf')
+		#     )
 
-		    # cm_all_nodes, unique_leaks = get_precision_recall_data(cm_all_nodes)
+		#     # cm_all_nodes, unique_leaks = get_precision_recall_data(cm_all_nodes)
 
-		    st.set_page_config(layout="wide")
+		#     st.set_page_config(layout="wide")
 
-		    display_precision_recall_f1(unique_leaks, cm_all_nodes)
+		#     display_precision_recall_f1(unique_leaks, cm_all_nodes)
 
-		    dipslay_roc_curve(unique_leaks, cm_all_nodes, description+'_all')
+		#     dipslay_roc_curve(unique_leaks, cm_all_nodes, description+'_all')
 
-		    display_cm(cm_all_nodes, description+'_all')
+		#     display_cm(cm_all_nodes, description+'_all')
 
-		with st.expander("Wybor najlepszych wezlow i thresholdow"):
+		with st.expander("Osobna optymalizacja dla każdej wielkości wycieku"):
 
 			top_nodes_path = SIMULATION_CONFIG.output_folder / 'pickle' / 'best_nodes_xgb.pkl'
 
@@ -372,14 +378,14 @@ def display_ml_results(cm_all_nodes, cm_best_nodes, wn, description, best_nodes)
 				key=lambda x: float(x) if x.replace('.', '', 1).isdigit() else float('inf')
 			)
 
-			selected_leak_dia = st.selectbox("Wybierz Średnicę Wycieku", options=unique_leaks_dia,
-			    key=description+"_leak_dia")
+			# selected_leak_dia = st.selectbox("Wybierz Średnicę Wycieku", options=unique_leaks_dia,
+			#     key=description+"_leak_dia")
 
 			best_nodes['leak_diameter_parameter'] = best_nodes['leak_diameter_parameter'].apply(
 				lambda x: str(round(x, 2)) if isinstance(x, (float, int)) and pd.notna(x) else str(x)
 			)
 
-			display_results_table(best_nodes, selected_leak_dia, budget)
+			display_results_table(best_nodes, unique_leaks_dia, description, budget)
 
 			display_precision_recall_f1(unique_leaks, cm_best_nodes_budget)
 
@@ -387,5 +393,38 @@ def display_ml_results(cm_all_nodes, cm_best_nodes, wn, description, best_nodes)
 
 			display_cm(cm_best_nodes_budget, description+'_best')
 
-			display_sensors_map(best_nodes, selected_leak_dia, budget, wn)
+			display_sensors_map(best_nodes, unique_leaks_dia, description, budget, wn)
 
+
+		if cm_global is not None and best_nodes_global is not None:
+			with st.expander("Optymalizacja dla wszystkich rozmiarów wycieków"):
+				
+				max_budget_glob = cm_global['budget'].max()
+				min_budget_glob = cm_global['budget'].min()
+
+				budget_glob = st.slider(
+					"Wybierz budżet (liczbę czujników) dla modelu globalnego:",
+					min_value=min_budget_glob,
+					max_value=max_budget_glob,
+					value=1,  
+					step=1,
+					key=description+"_global_budget"
+				)
+
+				cm_global_budget = cm_global.loc[cm_global['budget'] == budget_glob].copy()
+
+				cm_global_budget['TPR'] = cm_global_budget['TP'] / (cm_global_budget['TP'] + cm_global_budget['FN'] + 1e-9)          
+				cm_global_budget['FPR'] = cm_global_budget['FP'] / (cm_global_budget['FP'] + cm_global_budget['TN'] + 1e-9)         
+				cm_global_budget['Precision'] = cm_global_budget['TP'] / (cm_global_budget['TP'] + cm_global_budget['FP'] + 1e-9)    
+				cm_global_budget['F1'] = 2 * (cm_global_budget['Precision'] * cm_global_budget['TPR']) / (cm_global_budget['Precision'] + cm_global_budget['TPR'] + 1e-9)
+
+				unique_leaks_glob = sorted(
+					cm_global_budget['leak_diameter_parameter'].astype(str).unique(),
+					key=lambda x: float(x) if x.replace('.', '', 1).isdigit() else float('inf')
+				)
+
+				display_results_table(best_nodes_global, ['Global'], description + '_global_table', budget_glob) 
+				display_precision_recall_f1(unique_leaks_glob, cm_global_budget)
+				dipslay_roc_curve(unique_leaks_glob, cm_global_budget, description+'_global')
+				display_cm(cm_global_budget, description+'_global')
+				display_sensors_map(best_nodes_global, ['Global'], description + '_global_map', budget_glob, wn)

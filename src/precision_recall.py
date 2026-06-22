@@ -424,7 +424,7 @@ def get_precision_recall_leak_df_seperate(target_leak_diameter, leak_signals, no
                 'precision': precision, 
                 'recall': recall,
                 'f1_score': f1_score,
-                'leak_diameters': str(ldp_val), # Przekazujemy to jako string (kompatybilność z UI w Streamlit)
+                'leak_diameters': str(ldp_val), 
                 'TP': TP,
                 'FP': FP,
                 'TN': TN,

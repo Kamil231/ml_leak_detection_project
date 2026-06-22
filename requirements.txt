@@ -17,3 +17,5 @@ torch
 seaborn
 lightgbm
 gdown
+optuna
+optuna-integration[lightgbm,xgboost]

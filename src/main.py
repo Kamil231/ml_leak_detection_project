@@ -42,32 +42,46 @@ logging.captureWarnings(True)
 
 if __name__ == '__main__':
 
+    plik_parametry = SIMULATION_CONFIG.output_folder / 'parametrem_tuning.txt'
+    with open(plik_parametry, 'w', encoding='utf-8') as f:
+        f.write("=== Wyniki Optymalizacji Hiperparametrów Optuna ===\n")
+
     start_time = time.perf_counter()
 
     # leak_diameter_parameters = [0.01, .05, .1, 0.15, .02, 0.4, 0.6]
-    # leak_diameter_parameters = [0.1, 0.6]
-    leak_diameter_parameters = [round(x * 0.05, 2) for x in range(1, 20)]
+    leak_diameter_parameters = [0.1, 0.6]
+
+
+    #leak_diameter_parameters = [round(x * 0.05, 2) for x in range(1, 20)]
     times_of_failure_h = [24, 48]
     # times_of_failure_h = [48]
     print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))
 
     # run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h)
 
-    # get_signals_df()
+    # run_chama_simulation_parallel_seperate_leaks(leak_diameter_parameters, times_of_failure_h)
 
-    # XGBoost_analysis_all_nodes()
+    get_signals_df()
 
-    # XGBoost_analysis_best_nodes()
+    XGBoost_analysis_all_nodes()
 
-    # LightGBM_analysis_all_nodes()
+    XGBoost_analysis_best_nodes()
 
-    # LightGBM_analysis_best_nodes()
+    XGBoost_analysis_global()
+
+    LightGBM_analysis_all_nodes()
+
+    LightGBM_analysis_best_nodes()
+
+    LightGBM_analysis_global()
 
     # nn_analysis_parallel()
     
     # NN_analysis_best_nodes()
 
-    run_chama_simulation_parallel_seperate_leaks(leak_diameter_parameters, times_of_failure_h)
+    # nn_analysis_global()
+
+
 
     end_time = time.perf_counter()
 

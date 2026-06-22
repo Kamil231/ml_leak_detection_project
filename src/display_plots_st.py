@@ -8,6 +8,7 @@ from display_network_map import display_network_map
 from display_nodes_parameters import display_nodes_parameters
 from display_signals import display_signals
 from display_ml_results import display_ml_results
+from display_summary import display_summary
 
 PICKLE_DIR = SIMULATION_CONFIG.output_folder / 'pickle'
 
@@ -34,7 +35,19 @@ def load_all_data(base_dir: Path):
 
         'best_nodes_nn': 'best_nodes_nn.pkl',
         'best_nodes_xgb': 'best_nodes_xgb.pkl',
-        'best_nodes_gbm': 'best_nodes_lgb.pkl'
+        'best_nodes_gbm': 'best_nodes_lgb.pkl',
+
+        'cm_global_xgb': 'confusion_matrix_global_xgb.pkl',
+        'best_nodes_global_xgb': 'top_nodes_global_xgb.pkl',
+
+        'cm_global_lgb': 'confusion_matrix_global_lgb.pkl',
+        'best_nodes_global_lgb': 'top_nodes_global_lgb.pkl',
+
+        'cm_global_nn': 'confusion_matrix_global_nn.pkl',
+        'best_nodes_global_nn': 'top_nodes_global_nn.pkl',
+
+        'df_global_summary': 'global_models_table.pkl',
+        'df_specific_summary': 'seperate_leaks_models_table.pkl'
 
     }
     
@@ -80,6 +93,14 @@ nodal_thresholds_std = data['nodal_thresholds_std']
 best_nodes_nn = data['best_nodes_nn']
 best_nodes_xgb = data['best_nodes_xgb']
 best_nodes_gbm = data['best_nodes_gbm']
+cm_global_xgb = data['cm_global_xgb']
+best_nodes_global_xgb = data['best_nodes_global_xgb']
+cm_global_lgb = data['cm_global_lgb']
+best_nodes_global_lgb = data['best_nodes_global_lgb']
+cm_global_nn = data['cm_global_nn']
+best_nodes_global_nn = data['best_nodes_global_nn']
+df_global_summary = data['df_global_summary']
+df_specific_summary = data['df_specific_summary']
 
 results_real, results_base, node_name_list, wn = load_simulation_results()
 
@@ -97,8 +118,12 @@ display_network_map(scenario_metadata, wn)
 
 display_Chama(chama_outputs_single, sensors_wn_dict, wn, precision_recall_data_chama, chama_outputs_seperate, precision_recall_data_chama_seperate)
 
-display_ml_results(confusion_matrix_df_XGB, confusion_matrix_best_nodes_df_XGB, wn, 'XGB', best_nodes_xgb)
+display_ml_results(confusion_matrix_df_XGB, confusion_matrix_best_nodes_df_XGB, wn, 'XGB', best_nodes_xgb, cm_global=cm_global_xgb, best_nodes_global=best_nodes_global_xgb)
 
-display_ml_results(confusion_matrix_df_LGB, confusion_matrix_best_nodes_df_LGB, wn, 'LGB', best_nodes_gbm)
+display_ml_results(confusion_matrix_df_LGB, confusion_matrix_best_nodes_df_LGB, wn, 'LGB', best_nodes_gbm, cm_global=cm_global_lgb, best_nodes_global=best_nodes_global_lgb)
 
-display_ml_results(confusion_matrix_df, confusion_matrix_best_nodes_df, wn, 'Neural Networks', best_nodes_nn)
+#display_ml_results(confusion_matrix_df, confusion_matrix_best_nodes_df, wn, 'Neural Networks', best_nodes_nn)
+
+display_ml_results(confusion_matrix_df, confusion_matrix_best_nodes_df, wn, 'Neural Networks', best_nodes_nn, cm_global=cm_global_nn, best_nodes_global=best_nodes_global_nn)
+
+display_summary(df_global_summary, df_specific_summary)

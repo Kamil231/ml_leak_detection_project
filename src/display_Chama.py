@@ -263,7 +263,7 @@ def display_Chama_single(chama_outputs, sensors_wn_dict, wn, precision_recall_da
 			filtered_precision_recall_data = precision_recall_data[
 				(precision_recall_data['budget'] == selected_budget) & 
 				(precision_recall_data['formulation'] == selected_form) &
-				(precision_recall_data['thp'].isin(selected_thp)) # Dodany warunek dla THP
+				(precision_recall_data['thp'].isin(selected_thp))
 			]
 
 			with col_plots:
@@ -498,7 +498,7 @@ def display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, pr
 				impact_row_dict = impact_row['Result'].item()
 				coverage_row_dict = coverage_row['Result'].item()
 
-				with st.expander(f"Impact Formulation (Budżet {budget_picked}, Wyciek {selected_ldp})"):
+				with st.expander(f"Impact Formulation"):
 					m1, m2, m3, m4 = st.columns(4)
 					m1.metric('Objective (Time): ', f"{impact_row_dict['Objective']/3600:.2f} h")
 					m2.metric('FractionDetected: ', f"{impact_row_dict['FractionDetected']:.2%}")
@@ -520,7 +520,7 @@ def display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, pr
 						st.pyplot(fig, use_container_width=False)
 						st.caption(f"Wybrane węzły: {', '.join(map(str, impact_row_dict['Sensors']))}")
 
-				with st.expander(f"Coverage Formulation (Budżet {budget_picked}, Wyciek {selected_ldp})"):
+				with st.expander(f"Coverage Formulation"):
 					m1, m2, m3, m4 = st.columns(4)
 					m1.metric('Objective: ', f"{coverage_row_dict['Objective']:.4f}")
 					m2.metric('FractionDetected: ', f"{coverage_row_dict['FractionDetected']:.2%}")
@@ -542,7 +542,7 @@ def display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, pr
 						st.pyplot(fig, use_container_width=False)
 						st.caption(f"Wybrane węzły: {', '.join(map(str, coverage_row_dict['Sensors']))}")
 
-			with st.expander(f"Analiza kompromisu: Budżet vs Optymalizacja (Dla wycieku {selected_ldp})"):
+			with st.expander(f"Analiza wyników symulacji wycieków)"):
 				fig = make_subplots(rows=1, cols=2, subplot_titles=("Impact Formulation", "Coverage Formulation"), shared_xaxes=True, specs=[[{"secondary_y": True}, {"secondary_y": True}]])
 				imp_obj, cov_obj, imp_frac, cov_frac = [], [], [], []
 
@@ -558,12 +558,50 @@ def display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, pr
 						cov_frac.append(c_row['Result'].item()['FractionDetected'])
 
 				if imp_frac and cov_obj:
-					fig.add_trace(go.Scatter(x=budget_list, y=imp_obj, mode='lines+markers', name="Impact (Time Obj)", line=dict(color='red', width=3)), row=1, col=1, secondary_y=False)
-					fig.add_trace(go.Scatter(x=budget_list, y=imp_frac, mode='lines+markers', name="Impact (Detected %)", line=dict(color='green', width=2, dash='dot')), row=1, col=1, secondary_y=True)
-					fig.add_trace(go.Scatter(x=budget_list, y=cov_obj, mode='lines+markers', name="Coverage (Obj)", line=dict(color='blue', width=3)), row=1, col=2, secondary_y=False)
-					fig.add_trace(go.Scatter(x=budget_list, y=cov_frac, mode='lines+markers', name="Coverage (Detected %)", line=dict(color='orange', width=2, dash='dot')), row=1, col=2, secondary_y=True)
+					fig.add_trace(
+					    go.Scatter(x=budget_list, y=imp_obj,
+					               mode='lines+markers', name="Impact (Objective)", 
+					               legend="legend", 
+					               line=dict(color='red', width=3),
+					               hovertemplate="<b>Objective (Time)</b><br>X: %{x}<br>Y: %{y:.2f}<extra></extra>"),
+					    row=1, col=1, secondary_y=False
+					)
 
-				fig.update_layout(height=500, template="plotly_white", margin=dict(t=30, b=50), hovermode='x unified')
+					fig.add_trace(
+					    go.Scatter(x=budget_list, y=imp_frac,
+					               mode='lines+markers', name="Impact (Detected %)", 
+					               legend="legend",  
+					               line=dict(color='green', width=2, dash='dot'),
+					               hovertemplate="<b>Fraction Detected</b><br>X: %{x}<br>Y: %{y:.2%}<extra></extra>"),
+					    row=1, col=1, secondary_y=True
+					)
+
+					fig.add_trace(
+					    go.Scatter(x=budget_list, y=cov_obj,
+					               mode='lines+markers', name="Coverage (Objective)", 
+					               legend="legend2", 
+					               line=dict(color='blue', width=3),
+					               hovertemplate="<b>Objective</b><br>X: %{x}<br>Y: %{y:.2f}<extra></extra>"),
+					    row=1, col=2, secondary_y=False
+					)
+
+					fig.add_trace(
+					    go.Scatter(x=budget_list, y=cov_frac,
+					               mode='lines+markers', name="Coverage (Detected %)", 
+					               legend="legend2",  
+					               line=dict(color='orange', width=2, dash='dot'),
+					               hovertemplate="<b>Fraction Detected</b><br>X: %{x}<br>Y: %{y:.2%}<extra></extra>"),
+					    row=1, col=2, secondary_y=True
+					)
+
+				fig.update_layout(
+	                height=550, 
+	                template="plotly_white", 
+	                margin=dict(t=30, b=100), 
+	                hovermode='closest', 
+	                legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.25, title=dict(text="")),
+	                legend2=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.75, title=dict(text=""))
+	            )
 				fig.update_yaxes(title_text="Impact Time (h)", row=1, col=1, secondary_y=False)
 				fig.update_yaxes(title_text="Coverage Obj", row=1, col=2, secondary_y=False)
 				fig.update_yaxes(range=[0, 1.05], secondary_y=True, showgrid=False)
@@ -574,144 +612,230 @@ def display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, pr
 		pr_forms_all = ['ImpactFormulation', 'CoverageFormulation']
 
 		with st.expander("Krzywa Precision-Recall oraz F1 Score"):
-			col_plot, col_settings = st.columns([4, 1])
 			
-			with col_settings:
-				st.markdown("**Ustawienia wykresu**")
-				pr_budget = st.selectbox("Budżet", options=pr_budgets_all, key="pr_budget_seperate")
-				pr_form = st.selectbox("Algorytm", options=pr_forms_all, key="pr_form_seperate")
+			default_budget = pr_budgets_all[len(pr_budgets_all) // 2]
+			col_params, col_plots = st.columns([1, 4], vertical_alignment="top")
+			
+			with col_params:
+				st.markdown("### Filtry")
 				
-			with col_plot:
-				filtered_pr = precision_recall_data[
-					(precision_recall_data['budget'] == pr_budget) & 
-					(precision_recall_data['formulation'] == pr_form)
-				].copy()
+				pr_budget = st.select_slider(
+					"Budget",
+					options=pr_budgets_all,
+					value=default_budget,
+					key="pr_budget_seperate"
+				)
+				
+				pr_form = st.selectbox("Formulation", options=pr_forms_all, key="pr_form_seperate")
+				
+				st.markdown("**Wybierz Threshold (THP):**")
+				unique_thp = sorted(precision_recall_data['thp'].dropna().unique())
+				df_thp = pd.DataFrame({'Thp': unique_thp})
 
+				selection_event = st.dataframe(
+					df_thp,
+					hide_index=True,           
+					on_select="rerun",         
+					selection_mode="multi-row",
+					height=250,
+					key="pr_thp_df_sep"
+				)
+
+				selected_indices = selection_event.selection.rows
+
+				if not selected_indices:
+					selected_thp = unique_thp
+					st.info("Brak zaznaczenia: Wyświetlam wszystkie progi.")
+				else:
+					selected_thp = df_thp.iloc[selected_indices]['Thp'].tolist()
+				
+			filtered_pr = precision_recall_data[
+				(precision_recall_data['budget'] == pr_budget) & 
+				(precision_recall_data['formulation'] == pr_form) &
+				(precision_recall_data['thp'].isin(selected_thp))
+			].copy()
+
+			with col_plots:
 				if not filtered_pr.empty:
-					col_p1, col_p2 = st.columns(2)
-					with col_p1:
-						fig_pr = px.line(
-							filtered_pr, 
-							x="recall", 
-							y="precision", 
-							color="leak_diameters", # Magia dzieje się tutaj
-							hover_data=["thp"], 
-							markers=True, 
-							title=f"Krzywa P-R (Budżet {pr_budget}, {pr_form})"
-						)
-						fig_pr.update_layout(xaxis_title="Recall (Czułość)", yaxis_title="Precision (Precyzja)", template='plotly_dark', plot_bgcolor='#0E1117', paper_bgcolor='#0E1117')
-						st.plotly_chart(fig_pr, use_container_width=True)
-					with col_p2:
-						fig_f1 = px.line(
-							filtered_pr, 
-							x="thp", 
-							y="f1_score", 
-							color="leak_diameters", # I tutaj
-							markers=True, 
-							title=f"F1-Score vs THP (Budżet {pr_budget}, {pr_form})"
-						)
-						fig_f1.update_layout(xaxis_title="Próg decyzyjny (THP)", yaxis_title="F1-Score", template='plotly_dark', plot_bgcolor='#0E1117', paper_bgcolor='#0E1117')
-						st.plotly_chart(fig_f1, use_container_width=True)
+					fig_pr = px.line(
+						filtered_pr, 
+						x="recall", 
+						y="precision", 
+						color="leak_diameters", 
+						hover_data=["thp"], 
+						markers=True, 
+						title=f"Krzywa P-R dla Budżetu {pr_budget} ({pr_form})"
+					)
+					fig_pr.update_layout(xaxis_title="Recall (Czułość)", yaxis_title="Precision (Precyzja)", template='plotly_dark', plot_bgcolor='#0E1117', paper_bgcolor='#0E1117')
+					st.plotly_chart(fig_pr, use_container_width=True)
+
+					fig_f1 = px.line(
+						filtered_pr, 
+						x="thp", 
+						y="f1_score", 
+						color="leak_diameters", 
+						markers=True, 
+						title="Optymalizacja Progu (F1-Score vs Threshold)"
+					)
+					fig_f1.update_layout(xaxis_title="Próg decyzyjny (THP)", yaxis_title="F1-Score", template='plotly_dark', plot_bgcolor='#0E1117', paper_bgcolor='#0E1117')
+					st.plotly_chart(fig_f1, use_container_width=True)
 				else:
 					st.warning("Brak danych dla wybranych filtrów.")
 
 		with st.expander("Krzywa ROC"):
-			col_plot, col_settings = st.columns([4, 1])
 			
-			with col_settings:
-				st.markdown("**Ustawienia wykresu**")
-				roc_budget = st.selectbox("Budżet", options=pr_budgets_all, key="roc_budget_seperate")
-				roc_form = st.selectbox("Algorytm", options=pr_forms_all, key="roc_form_seperate")
+			col_filters, col_chart = st.columns([1, 3])
+			
+			with col_filters:
+				st.markdown("### Filtry modelu")
+				roc_form = st.selectbox("Formulation", options=pr_forms_all, key="roc_form_seperate")
+				roc_budget = st.selectbox("Budget", options=pr_budgets_all, key="roc_budget_seperate")
 				
-			with col_plot:
-				filtered_roc = precision_recall_data[
-					(precision_recall_data['budget'] == roc_budget) & 
-					(precision_recall_data['formulation'] == roc_form)
-				].copy()
+			filtered_roc = precision_recall_data[
+				(precision_recall_data['budget'] == roc_budget) & 
+				(precision_recall_data['formulation'] == roc_form)
+			].copy()
 
+			fig_roc = go.Figure()
+			fig_roc.add_trace(go.Scatter(
+				x=[0, 1], y=[0, 1], mode='lines', line=dict(dash='dash', color='#FF4B4B'), name='Losowy klasyfikator', showlegend=False
+			))
+			
+			auc_results = []
+
+			with col_chart:
 				if not filtered_roc.empty:
 					filtered_roc['TPR'] = filtered_roc['TP'] / (filtered_roc['TP'] + filtered_roc['FN'] + 1e-9)
 					filtered_roc['FPR'] = filtered_roc['FP'] / (filtered_roc['FP'] + filtered_roc['TN'] + 1e-9)
-					filtered_roc = filtered_roc.sort_values(by=['leak_diameters', 'thp'], ascending=[True, False])
 					
-					auc_dict = {}
-					for ldp, group in filtered_roc.groupby('leak_diameters'):
-						fpr_pts = group['FPR'].tolist()
-						tpr_pts = group['TPR'].tolist()
-						pts = sorted(zip(fpr_pts, tpr_pts))
-						if pts and pts[0][0] != 0: pts.insert(0, (0.0, 0.0))
-						if pts and pts[-1][0] != 1: pts.append((1.0, 1.0))
-						if pts:
-							x_auc, y_auc = zip(*pts)
-							auc_dict[ldp] = auc(x_auc, y_auc)
-						else:
-							auc_dict[ldp] = 0.0
-							
-					filtered_roc['leaks'] = filtered_roc['leak_diameters'].apply(lambda x: f"{x}")
-
-					fig_roc = px.line(
-						filtered_roc, 
-						x="FPR", 
-						y="TPR", 
-						color="leaks", 
-						hover_data=["thp"], 
-						markers=True,
-						title=f"Krzywa ROC (Budżet {roc_budget}, {roc_form})"
+					unique_leaks = sorted(
+						filtered_roc['leak_diameters'].astype(str).unique(),
+						key=lambda x: float(x) if x.replace('.', '', 1).isdigit() else float('inf')
 					)
 					
-					fig_roc.add_shape(type='line', line=dict(dash='dash', color='#FF4B4B'), x0=0, x1=1, y0=0, y1=1)
+					for leak in unique_leaks:
+						group = filtered_roc[filtered_roc['leak_diameters'].astype(str) == leak]
+						group_sorted = group.sort_values(by='thp', ascending=False)
+						
+						fpr_points = group_sorted['FPR'].tolist()
+						tpr_points = group_sorted['TPR'].tolist()
+						roc_points = sorted(zip(fpr_points, tpr_points))
+						
+						if roc_points and roc_points[0][0] != 0: roc_points.insert(0, (0.0, 0.0))
+						if roc_points and roc_points[-1][0] != 1: roc_points.append((1.0, 1.0))
+						
+						x_auc, y_auc = zip(*roc_points) if roc_points else ([], [])
+						calculated_auc = auc(x_auc, y_auc) if roc_points else 0.0
+						
+						auc_results.append({
+							'Formulation': roc_form,
+							'Budget': roc_budget,
+							'Leak Diameter': leak,
+							'AUC Score': round(calculated_auc, 4)
+						})
+
+						fig_roc.add_trace(go.Scatter(
+							x=group_sorted['FPR'], y=group_sorted['TPR'],
+							mode='lines+markers', name=f"{leak}", marker=dict(size=6),
+							text=group_sorted['thp'],
+							hovertemplate=(
+								f"<b>Średnica wycieku:</b> {leak}<br>" +
+								"<b>FPR:</b> %{x:.4f}<br>" +
+								"<b>TPR:</b> %{y:.4f}<br>" +
+								"<b>Próg (thp):</b> %{text}<extra></extra>"
+							)
+						))
 					
 					fig_roc.update_layout(
 						template='plotly_dark', plot_bgcolor='#0E1117', paper_bgcolor='#0E1117',
-						xaxis_title="False Positive Rate (FPR)", yaxis_title="True Positive Rate (TPR)",
-						height=550
+						xaxis_title="False Positive Rate (FPR)",
+						xaxis=dict(range=[-0.02, 1.05], gridcolor='#262730', zerolinecolor='#41444C'),
+						yaxis_title="True Positive Rate (TPR)",
+						yaxis=dict(range=[-0.02, 1.05], gridcolor='#262730', zerolinecolor='#41444C'),
+						height=600, margin=dict(l=40, r=20, t=40, b=40),
+						showlegend=True,
+						legend=dict(
+							title=dict(text="Leaks", font=dict(color='white')), font=dict(color='#A3A8B4', size=12),
+							orientation="v", x=1.02, y=1, xanchor="left", yanchor="top", bgcolor="rgba(0,0,0,0)"
+						),
+						legend_itemclick="toggle", legend_itemdoubleclick="toggleothers"
 					)
+					
 					st.plotly_chart(fig_roc, use_container_width=True)
+					
+					auc_df = pd.DataFrame(auc_results)
+					if not auc_df.empty:
+						auc_df = auc_df.sort_values(by='AUC Score', ascending=False)
+						with st.expander("Tabela AUC (Area Under Curve)"):
+							st.dataframe(auc_df, use_container_width=True, hide_index=True)
 				else:
 					st.warning("Brak danych do krzywej ROC.")
 
 		with st.expander("Macierz Pomyłek (Confusion Matrix)"):
-			col_plot, col_settings = st.columns([4, 1])
 			
-			with col_settings:
-				st.markdown("**Ustawienia wykresu**")
-				cm_ldp = st.selectbox("Rozmiar wycieku", options=pr_leaks_all, key="cm_ldp_seperate_seperate")
-				cm_budget = st.selectbox("Budżet", options=pr_budgets_all, key="cm_budget_seperate_seperate")
-				cm_form = st.selectbox("Algorytm", options=pr_forms_all, key="cm_form_seperate")
+			col_params_cm, col_plots_cm = st.columns([1, 4], vertical_alignment="top")
+			default_budget = pr_budgets_all[len(pr_budgets_all) // 2]
+			
+			with col_params_cm:
+				st.markdown("### Filtry Macierzy")
+				cm_budget = st.select_slider(
+					"Budget",
+					options=pr_budgets_all,
+					value=default_budget,
+					key="cm_budget_seperate_seperate"
+				)
 				
-				cm_data_filtered = precision_recall_data[
-					(precision_recall_data['budget'] == cm_budget) & 
-					(precision_recall_data['formulation'] == cm_form) &
-					(precision_recall_data['leak_diameters'] == str(cm_ldp))
-				]
+				cm_form = st.selectbox("Formulation", options=pr_forms_all, key="cm_form_seperate")
 				
-				if not cm_data_filtered.empty:
-					unique_thp = sorted(cm_data_filtered['thp'].dropna().unique())
-					cm_thp = st.select_slider("Threshold (THP)", options=unique_thp, value=unique_thp[len(unique_thp)//2], key="cm_thp_seperate")
-				else:
-					cm_thp = None
+				unique_thp_cm = sorted(precision_recall_data['thp'].dropna().unique())
+				cm_thp = st.selectbox(
+					"Wybierz Threshold (THP)", 
+					unique_thp_cm, 
+					index=len(unique_thp_cm)//2, 
+					format_func=lambda x: f"{x:.2f}", 
+					key="cm_thp_seperate"
+				)
+				
+				cm_ldp = st.selectbox("Wybierz Analizowany Wyciek", options=pr_leaks_all, key="cm_ldp_seperate_seperate")
+				
+			filtered_cm_data = precision_recall_data[
+				(precision_recall_data['budget'] == cm_budget) & 
+				(precision_recall_data['formulation'] == cm_form) &
+				(precision_recall_data['thp'] == cm_thp) &
+				(precision_recall_data['leak_diameters'] == str(cm_ldp))
+			]
+			
+			with col_plots_cm:
+				if not filtered_cm_data.empty:
+					row = filtered_cm_data.iloc[0]
 					
-			with col_plot:
-				if cm_thp is not None:
-					cm_data = cm_data_filtered[cm_data_filtered['thp'] == cm_thp]
-					if not cm_data.empty:
-						row = cm_data.iloc[0]
-						z_values = [[int(row['TN']), int(row['FP'])], 
-									[int(row['FN']), int(row['TP'])]]
-						
-						fig_cm = px.imshow(z_values, text_auto=True, color_continuous_scale=[[0, 'white'], [1, 'white']], 
-										labels=dict(x="Decyzja Systemu", y="Stan Rzeczywisty"),
-										x=['Szum (-)', 'Wyciek (+)'], y=['Szum (-)', 'Wyciek (+)'],
-										title=f"Macierz Pomyłek (Wyciek {cm_ldp}, THP: {cm_thp:.2f})")
-						fig_cm.update_layout(coloraxis_showscale=False)
-						fig_cm.update_traces(textfont=dict(color='black', size=16))
-						st.plotly_chart(fig_cm, use_container_width=True)
+					z_values = [[int(row['TN']), int(row['FP'])], 
+								[int(row['FN']), int(row['TP'])]]
+					
+					x_labels = ['Przewidywany Szum (-)', 'Przewidywany Wyciek (+)']
+					y_labels = ['Faktyczny Szum (-)', 'Faktyczny Wyciek (+)']
+
+					fig_cm = px.imshow(
+						z_values, 
+						x=x_labels, 
+						y=y_labels, 
+						text_auto=True, 
+						color_continuous_scale=[[0, 'white'], [1, 'white']], 
+						title=f"Macierz Pomyłek (Budżet: {cm_budget}, THP: {cm_thp:.2f}, Wyciek: {cm_ldp})"
+					)
+					fig_cm.update_layout(
+						xaxis_title="Decyzja Systemu (Algorytm)", 
+						yaxis_title="Stan Rzeczywisty (Fizyka Sieci)", 
+						coloraxis_showscale=False
+					)
+					fig_cm.update_traces(textfont=dict(color='black', size=16))
+					st.plotly_chart(fig_cm, use_container_width=True)
 				else:
 					st.warning("Brak danych do macierzy pomyłek.")
 
 def display_Chama(chama_outputs_single, sensors_wn_dict, wn, precision_recall_data_chama_single, chama_outputs_seperate, precision_recall_data_chama_seperate):
 
-	with st.expander("Optymalizacja Chama"):
+	with st.expander("Optymalizacja Chama - Wyniki"):
 
 		display_Chama_single(chama_outputs_single, sensors_wn_dict, wn, precision_recall_data_chama_single)
 
