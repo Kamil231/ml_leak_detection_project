@@ -40,6 +40,8 @@ def objective_xgb(trial, dtrain, dval):
     return evals_result["validation"]["aucpr"][-1]
 
 def get_tuned_params_xgb(fun_name):
+
+    print('get_tuned_params_xgb')
     TEST_SIZE = 0.15
     VAL_SIZE = 0.15
 
@@ -60,7 +62,29 @@ def get_tuned_params_xgb(fun_name):
         X_temp, y_temp, test_size=val_ratio, random_state=42, stratify=y_temp
     )
 
-    dtrain = xgb.DMatrix(X_train, label=y_train)
+    noise_number = np.sum(y_train == 0)
+    leak_number = np.sum(y_train == 1)
+    
+    if leak_number > 0:
+        class_weight = noise_number / leak_number
+    else:
+        class_weight = 1.0 
+        
+    class_weight = min(class_weight, 1000.0)
+    
+    weights_train = np.where(y_train == 1, class_weight, 1.0).astype(np.float32)
+
+    print('11')
+
+    print('X_train.shape: ', X_train.shape)
+    print('y_train.shape: ', y_train.shape)
+    print('weights_train.shape: ', weights_train.shape)
+
+    # dtrain = xgb.DMatrix(X_train, label=y_train)
+    dtrain = xgb.DMatrix(X_train, label=y_train, weight=weights_train)
+
+    print('22')
+
     dval = xgb.DMatrix(X_val, label=y_val)
 
     print("Rozpoczynam tuning hiperparametrów XGBoost za pomocą Optunay")
@@ -136,7 +160,19 @@ def XGBoost_analysis_all_nodes():
 
         probs = model_xgb.predict(dtest)
 
-        for decision_threshold in [round(x * 0.1, 1) for x in range(1, 10)]:
+        fpr, tpr, thresholds_roc = roc_curve(y_test, probs)
+
+        valid_thresholds = thresholds_roc[np.isfinite(thresholds_roc)]
+        if len(valid_thresholds) > 100:
+            idx = np.linspace(0, len(valid_thresholds) - 1, 100, dtype=int)
+            decision_thresholds = valid_thresholds[idx]
+        else:
+            decision_thresholds = valid_thresholds
+            
+        decision_thresholds = np.unique(np.append(decision_thresholds, [0.0, 1.0]))
+
+        # for decision_threshold in [round(x * 0.1, 1) for x in range(1, 10)]:
+        for decision_threshold in decision_thresholds:
 
             preds = (probs >= decision_threshold).astype(int)
 
@@ -234,7 +270,17 @@ def XGBoost_analysis_best_nodes():
             least_node = node_importance_df.sort_values(by=['Importance', 'Nodes'], ascending=[True, True]).iloc[0]['Nodes']
             unimportant_nodes_dropped.append(least_node)
 
-            for decision_threshold in [round(x * 0.1, 1) for x in range(1, 10)]:
+            valid_thresholds = thresholds_roc[np.isfinite(thresholds_roc)]
+            if len(valid_thresholds) > 100:
+                idx = np.linspace(0, len(valid_thresholds) - 1, 100, dtype=int)
+                decision_thresholds = valid_thresholds[idx]
+            else:
+                decision_thresholds = valid_thresholds
+                
+            decision_thresholds = np.unique(np.append(decision_thresholds, [0.0, 1.0]))
+
+            # for decision_threshold in [round(x * 0.1, 1) for x in range(1, 10)]:
+            for decision_threshold in decision_thresholds:
                 preds = (probs >= decision_threshold).astype(int)
 
                 tn, fp, fn, tp = confusion_matrix(y_test, preds).ravel()
@@ -341,7 +387,15 @@ def XGBoost_analysis_global():
         least_important_node = node_importance_df.sort_values(by=['Importance', 'Nodes'], ascending=[True, True]).iloc[0]['Nodes']
         unimportant_nodes_dropped.append(least_important_node)
 
-        decision_thresholds = [round(x * 0.1, 1) for x in range(1, 10)]
+        #decision_thresholds = [round(x * 0.1, 1) for x in range(1, 10)]
+        valid_thresholds = thresholds_roc[np.isfinite(thresholds_roc)]
+        if len(valid_thresholds) > 100:
+            idx = np.linspace(0, len(valid_thresholds) - 1, 100, dtype=int)
+            decision_thresholds = valid_thresholds[idx]
+        else:
+            decision_thresholds = valid_thresholds
+            
+        decision_thresholds = np.unique(np.append(decision_thresholds, [0.0, 1.0]))
 
         for eval_leak in eval_leak_diameters:
             
@@ -383,14 +437,14 @@ def XGBoost_analysis_global():
 
 import time
 
-start_time = time.time()
-XGBoost_analysis_global()
-t_global = time.time()
-XGBoost_analysis_all_nodes()
-t_all_nodes = time.time()
-XGBoost_analysis_best_nodes()
-t_best_nodes = time.time()
+# start_time = time.time()
+# XGBoost_analysis_global()
+# t_global = time.time()
+# XGBoost_analysis_all_nodes()
+# t_all_nodes = time.time()
+# XGBoost_analysis_best_nodes()
+# t_best_nodes = time.time()
 
-print('t_global: ', t_global - start_time)
-print('t_all_nodes: ', t_all_nodes - t_global)
-print('t_best_nodes: ', t_best_nodes - t_all_nodes)
+# print('t_global: ', t_global - start_time)
+# print('t_all_nodes: ', t_all_nodes - t_global)
+# print('t_best_nodes: ', t_best_nodes - t_all_nodes)

@@ -313,7 +313,8 @@ def get_precision_recall_data(cm):
 
 	return cm, unique_leaks
 
-def display_ml_results(cm_all_nodes, cm_best_nodes, wn, description, best_nodes, cm_global=None, best_nodes_global=None):
+#def display_ml_results(cm_all_nodes, cm_best_nodes, wn, description, best_nodes, cm_global=None, best_nodes_global=None):
+def display_ml_results(cm_best_nodes, wn, description, best_nodes, cm_global=None, best_nodes_global=None):
 
 	with st.expander(f"Optymalizacja {description} - Wyniki"):
 

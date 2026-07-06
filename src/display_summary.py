@@ -47,7 +47,7 @@ def display_summary_plot(df_original, description):
         if x_axis_mode == "Wielkość wycieku":
             budgets = sorted(df['budget'].unique())
             selected_filter = st.selectbox(
-                "Wykresy dla budzetu rownego::", 
+                "Wykresy dla budżetu równego:", 
                 options=budgets, 
                 key=f"{description}_plot_filter_budget"
             )
@@ -58,23 +58,22 @@ def display_summary_plot(df_original, description):
             
             x_values = df_filtered['leak_diameter_parameter'].astype(str).tolist()
             x_title = "Rozmiar awarii (Leak Diameter)"
-            plot_title = f"Skuteczność detekcji dla budżet = {selected_filter}"
+            plot_title = f"Skuteczność detekcji dla budżetu = {selected_filter}"
             
         else:
             leaks = sorted(df['leak_diameter_parameter'].unique(), key=lambda x: float(x) if x.replace('.', '', 1).isdigit() else float('inf'))
             selected_filter = st.selectbox(
-                "Wielkosc wycieku:", 
+                "Wielkość wycieku:", 
                 options=leaks, 
                 key=f"{description}_plot_filter_leak"
             )
             
-            # Filtrowanie i sortowanie dla osi X (Budżet) - Zmienione na rosnące (od najmniejszego)
             df_filtered = df[df['leak_diameter_parameter'] == selected_filter].copy()
             df_filtered = df_filtered.sort_values('budget', ascending=True) 
             
             x_values = df_filtered['budget'].tolist()
             x_title = "Liczba sensorów (Budżet)"
-            plot_title = f"Skuteczność detekcjidla wyciek = {selected_filter}"
+            plot_title = f"Skuteczność detekcji dla wycieku = {selected_filter}"
         
     with col_plot:
 
@@ -88,29 +87,54 @@ def display_summary_plot(df_original, description):
         fig = make_subplots(specs=[[{"secondary_y": True}]])
         
         for model in models:
+
             color = colors.get(model, '#AB63FA')
             
-            col_auc = f"{model}_AUC_ROC"
+            col_roc_auc = f"{model}_AUC_ROC"
+            col_pr_auc = f"{model}_PR_AUC"
             col_f1 = f"{model}_Max_F1"
+            col_partial_pr_auc = f"{model}_Partial_PR_AUC_0.6" 
             
-            if col_auc in df.columns:
+            if col_roc_auc in df.columns:
                 fig.add_trace(
                     go.Scatter(
-                        x=x_values, y=df_filtered[col_auc].tolist(), 
-                        name=f"{model} (AUC)",
+                        x=x_values, y=df_filtered[col_roc_auc].tolist(), 
+                        name=f"{model} (ROC AUC)",
                         mode='lines+markers', 
-                        line=dict(color=color, dash='solid', width=2.5)
+                        line=dict(color=color, dash='solid', width=2)
                     ),
                     secondary_y=False,
+                )
+
+            if col_pr_auc in df.columns:
+                fig.add_trace(
+                    go.Scatter(
+                        x=x_values, y=df_filtered[col_pr_auc].tolist(), 
+                        name=f"{model} (PR AUC)",
+                        mode='lines+markers', 
+                        line=dict(color=color, dash='solid', width=2)
+                    ),
+                    secondary_y=False,
+                )
+
+            if col_partial_pr_auc in df.columns:
+                fig.add_trace(
+                    go.Scatter(
+                        x=x_values, y=df_filtered[col_partial_pr_auc].tolist(), 
+                        name=f"{model} (Partial PR AUC ≥ 0.6)",
+                        mode='lines+markers', 
+                        line=dict(color=color, dash='solid', width=2)
+                    ),
+                    secondary_y=False, # Zostawiamy na głównej osi Y z resztą AUC
                 )
 
             if col_f1 in df.columns:
                 fig.add_trace(
                     go.Scatter(
                         x=x_values, y=df_filtered[col_f1].tolist(), 
-                        name=f"{model} (F1)",
+                        name=f"{model} (Max F1)",
                         mode='lines+markers', 
-                        line=dict(color=color, dash='dot', width=2.5)
+                        line=dict(color=color, dash='dash', width=2.5)
                     ),
                     secondary_y=True,
                 )
@@ -126,17 +150,16 @@ def display_summary_plot(df_original, description):
                 xanchor="left", x=1.02
             ),
             margin=dict(l=0, r=0, t=50, b=0),
-            height=550
+            height=650
         )
 
-        fig.update_yaxes(title_text="<b>AUC ROC</b> (Linia ciągła)", secondary_y=False, color="white", gridcolor='#262730', range=[-0.05, 1.05])
-        fig.update_yaxes(title_text="<b>Max F1 Score</b> (Linia przerywana)", secondary_y=True, color="white", showgrid=False, range=[-0.05, 1.05])
+        fig.update_yaxes(title_text="<b>AUC (ROC, PR, Partial PR)</b>", secondary_y=False, color="white", gridcolor='#262730', range=[-0.05, 1.05])
+        fig.update_yaxes(title_text="<b>Max F1 Score</b>", secondary_y=True, color="white", showgrid=False, range=[-0.05, 1.05])
 
         if use_budget_on_x and fixed_xaxis_budget:
             fig.update_xaxes(range=[0, 20])
 
         st.plotly_chart(fig, use_container_width=True)
-
 
 def filter_and_sort_dataframe(df, description):
 
@@ -180,7 +203,6 @@ def filter_and_sort_dataframe(df, description):
         filtered_df = df_table.copy() 
 
     st.dataframe(filtered_df, use_container_width=True, hide_index=True)
-
 
 def display_summary(df_uniwersalne, df_wycieki):
     with st.expander("Podsumowanie", expanded=False):

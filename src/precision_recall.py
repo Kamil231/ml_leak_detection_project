@@ -274,7 +274,6 @@ def precompute_bp_signals_dict(max_seed=120):
         
     return bp_dict
 
-
 def get_sensors_list_chama_seperate():
 
     chama_outputs = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'chama_outputs_seperate.pkl')

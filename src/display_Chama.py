@@ -12,7 +12,7 @@ from sklearn.metrics import auc
 
 def display_Chama_single(chama_outputs, sensors_wn_dict, wn, precision_recall_data):
 
-	with st.expander("Optymalizacja Chama - optymalizacja dla wszystkich rozmiarów wycieków"):
+	with st.expander("Optymalizacja dla wszystkich rozmiarów wycieków"):
 
 		with st.expander("Coverage & Impact"):
 
@@ -479,7 +479,7 @@ def display_Chama_single(chama_outputs, sensors_wn_dict, wn, precision_recall_da
 
 def display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, precision_recall_data):
 	
-	with st.expander("Optymalizacja Chama - osobna optymalizacja dla każdej wielkości wycieku"):
+	with st.expander("Osobna optymalizacja dla każdej wielkości wycieku"):
 		
 		with st.expander("Coverage & Impact"):
 			col_f1, col_f2 = st.columns(2)
@@ -837,6 +837,6 @@ def display_Chama(chama_outputs_single, sensors_wn_dict, wn, precision_recall_da
 
 	with st.expander("Optymalizacja Chama - Wyniki"):
 
-		display_Chama_single(chama_outputs_single, sensors_wn_dict, wn, precision_recall_data_chama_single)
-
 		display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, precision_recall_data_chama_seperate)
+
+		display_Chama_single(chama_outputs_single, sensors_wn_dict, wn, precision_recall_data_chama_single)

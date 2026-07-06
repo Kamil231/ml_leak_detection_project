@@ -224,7 +224,21 @@ def process_single_leak_all_nodes(leak_diameter, df_signals, metadata_cols, y, b
         probs = test_probs.squeeze().numpy()
 
     local_results = []
-    for decision_threshold in [round(x * 0.1, 1) for x in range(1, 10)]:
+
+    fpr, tpr, thresholds_roc = roc_curve(y_test, probs)
+
+    valid_thresholds = thresholds_roc[np.isfinite(thresholds_roc)]
+    if len(valid_thresholds) > 100:
+        idx = np.linspace(0, len(valid_thresholds) - 1, 100, dtype=int)
+        decision_thresholds = valid_thresholds[idx]
+    else:
+        decision_thresholds = valid_thresholds
+        
+    decision_thresholds = np.unique(np.append(decision_thresholds, [0.0, 1.0]))
+
+
+    # for decision_threshold in [round(x * 0.1, 1) for x in range(1, 10)]:
+    for decision_threshold in decision_thresholds:
         preds = (probs >= decision_threshold).astype(int)
         tn, fp, fn, tp = confusion_matrix(y_test, preds).ravel()
 
@@ -356,7 +370,17 @@ def nn_analysis_best_nodes():
             least_node = node_importance_df.sort_values(by=['Importance', 'Nodes'], ascending=[True, True]).iloc[0]['Nodes']
             unimportant_nodes_dropped.append(least_node)
 
-            for decision_threshold in [round(x * 0.1, 1) for x in range(1, 10)]:
+            valid_thresholds = thresholds_roc[np.isfinite(thresholds_roc)]
+            if len(valid_thresholds) > 100:
+                idx = np.linspace(0, len(valid_thresholds) - 1, 100, dtype=int)
+                decision_thresholds = valid_thresholds[idx]
+            else:
+                decision_thresholds = valid_thresholds
+                
+            decision_thresholds = np.unique(np.append(decision_thresholds, [0.0, 1.0]))
+
+            # for decision_threshold in [round(x * 0.1, 1) for x in range(1, 10)]:
+            for decision_threshold in decision_thresholds:
                 preds = (probs >= decision_threshold).astype(int)
 
                 tn, fp, fn, tp = confusion_matrix(y_test, preds).ravel()
@@ -469,7 +493,16 @@ def nn_analysis_global():
         least_important_node = node_importance_df.sort_values(by=['Importance', 'Nodes'], ascending=[True, True]).iloc[0]['Nodes']
         unimportant_nodes_dropped.append(least_important_node)
 
-        decision_thresholds = [round(x * 0.1, 1) for x in range(1, 10)]
+        # decision_thresholds = [round(x * 0.1, 1) for x in range(1, 10)]
+
+        valid_thresholds = thresholds_roc[np.isfinite(thresholds_roc)]
+        if len(valid_thresholds) > 100:
+            idx = np.linspace(0, len(valid_thresholds) - 1, 100, dtype=int)
+            decision_thresholds = valid_thresholds[idx]
+        else:
+            decision_thresholds = valid_thresholds
+            
+        decision_thresholds = np.unique(np.append(decision_thresholds, [0.0, 1.0]))
 
         for eval_leak in eval_leak_diameters:
             
@@ -512,17 +545,17 @@ def nn_analysis_global():
 
 import time
 
-start_time = time.time()
-print('\n\nnn_analysis_parallel()\n\n')
-nn_analysis_all_nodes()
-t_all_nodes = time.time()
-print('\n\nNN_analysis_best_nodes()\n\n')
-nn_analysis_best_nodes()
-t_best_nodes = time.time()
-print('\n\nnn_analysis_global()\n\n')
-nn_analysis_global()          #11h
-t_global = time.time()
+# start_time = time.time()
+# print('\n\nnn_analysis_parallel()\n\n')
+# nn_analysis_all_nodes()
+# t_all_nodes = time.time()
+# print('\n\nNN_analysis_best_nodes()\n\n')
+# nn_analysis_best_nodes()
+# t_best_nodes = time.time()
+# print('\n\nnn_analysis_global()\n\n')
+# nn_analysis_global()          #11h
+# t_global = time.time()
 
-print('t_all_nodes: ', t_all_nodes - t_global)
-print('t_best_nodes: ', t_best_nodes - t_all_nodes)
-print('t_global: ', t_global - start_time)
+# print('t_all_nodes: ', t_all_nodes - t_global)
+# print('t_best_nodes: ', t_best_nodes - t_all_nodes)
+# print('t_global: ', t_global - start_time)

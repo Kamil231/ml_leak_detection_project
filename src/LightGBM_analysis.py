@@ -10,12 +10,13 @@ import lightgbm as lgb
 from optuna.integration import LightGBMPruningCallback
 import optuna
 
-def objective_lgb(trial, train_data, val_data):
+def objective_lgb(trial, train_data, val_data, class_weight):
     param = {
         "objective": "binary",
         "metric": "average_precision",
         "verbosity": -1,
         "boosting_type": "gbdt",
+        "scale_pos_weight": class_weight,
         "num_leaves": trial.suggest_int("num_leaves", 20, 100),
         "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),
         "feature_fraction": trial.suggest_float("feature_fraction", 0.4, 1.0),
@@ -59,12 +60,17 @@ def get_tuned_model(fun_name='no_fun_name'):
         X_temp, y_temp, test_size=val_ratio, random_state=42, stratify=y_temp
     )
 
+    noise_number = np.sum(y_train == 0)
+    leak_number = np.sum(y_train == 1)
+    class_weight = noise_number / leak_number if leak_number > 0 else 1
+
     train_data = lgb.Dataset(X_train, label=y_train)
     val_data = lgb.Dataset(X_val, label=y_val)
     
     study = optuna.create_study(direction="maximize") 
 
-    study.optimize(lambda trial: objective_lgb(trial, train_data, val_data), n_trials=50)
+    # study.optimize(lambda trial: objective_lgb(trial, train_data, val_data), n_trials=50)
+    study.optimize(lambda trial: objective_lgb(trial, train_data, val_data, class_weight), n_trials=50)
 
     best_params = study.best_params
     
@@ -78,6 +84,7 @@ def get_tuned_model(fun_name='no_fun_name'):
     best_params["metric"] = "average_precision"
     best_params["boosting_type"] = "gbdt"
     best_params["verbosity"] = -1
+    best_params["scale_pos_weight"] = class_weight
 
     print("Trenowanie docel modelu")
     
@@ -143,12 +150,34 @@ def LightGBM_analysis_all_nodes():
 
         probs = model_lgb.predict(X_test)
 
-        for threshold in [round(x * 0.1, 1) for x in range(1, 10)]:
-            preds = (probs >= threshold).astype(int)
+        # for threshold in [round(x * 0.1, 1) for x in range(1, 10)]:
+        #     preds = (probs >= threshold).astype(int)
+        #     tn, fp, fn, tp = confusion_matrix(y_test, preds).ravel()
+        #     results_list.append({
+        #         'leak_diameter_parameter': leak_diameter_parameter,
+        #         'decision_threshold': threshold,
+        #         'TP': int(tp), 'FP': int(fp), 'TN': int(tn), 'FN': int(fn)
+        #     })
+
+        fpr_temp, tpr_temp, thresholds_roc_temp = roc_curve(y_test, probs)
+        valid_thresholds = thresholds_roc_temp[np.isfinite(thresholds_roc_temp)]
+        
+        if len(valid_thresholds) > 100:
+            idx = np.linspace(0, len(valid_thresholds) - 1, 100, dtype=int)
+            dynamic_thresholds = valid_thresholds[idx]
+        else:
+            dynamic_thresholds = valid_thresholds
+        
+        dynamic_thresholds = np.unique(np.append(dynamic_thresholds, [0.0, 1.0]))
+
+        for th in dynamic_thresholds:
+            preds = (probs >= th).astype(int)
             tn, fp, fn, tp = confusion_matrix(y_test, preds).ravel()
+            
             results_list.append({
-                'leak_diameter_parameter': leak_diameter_parameter,
-                'decision_threshold': threshold,
+                'leak_diameter_parameter': eval_leak, # (lub leak_diameter)
+                'decision_threshold': th,
+                'budget': budget,
                 'TP': int(tp), 'FP': int(fp), 'TN': int(tn), 'FN': int(fn)
             })
 
@@ -224,7 +253,17 @@ def LightGBM_analysis_best_nodes():
             least_node = X_tr.columns[np.argmin(model.feature_importance())]
             dropped_nodes.append(least_node)
 
-            for th in [round(x * 0.1, 1) for x in range(1, 10)]:
+            valid_thresholds = thresholds_roc[np.isfinite(thresholds_roc)]
+            if len(valid_thresholds) > 100:
+                idx = np.linspace(0, len(valid_thresholds) - 1, 100, dtype=int)
+                decision_thresholds = valid_thresholds[idx]
+            else:
+                decision_thresholds = valid_thresholds
+                
+            decision_thresholds = np.unique(np.append(decision_thresholds, [0.0, 1.0]))
+
+            # for th in [round(x * 0.1, 1) for x in range(1, 10)]:
+            for th in decision_thresholds:
                 tn, fp, fn, tp = confusion_matrix(y_test, (probs >= th).astype(int)).ravel()
                 results_list.append({'leak_diameter_parameter': leak_diameter, 'decision_threshold': th, 'budget': budget, 'TP': int(tp), 'FP': int(fp), 'TN': int(tn), 'FN': int(fn)})
 
@@ -235,17 +274,20 @@ def LightGBM_analysis_global():
 
     model_lgb = get_tuned_model('LightGBM_analysis_global')
 
-    # df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_ml_dataset.pkl')
+    best_params = model_lgb.params.copy()
+    best_params.pop('num_iterations', None)
 
-    # y = df_signals['Is_Leak']
+    df_signals = pd.read_pickle(SIMULATION_CONFIG.output_folder / 'pickle' / 'signals_ml_dataset.pkl')
 
-    # metadata_cols = ['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T', 'Is_Leak']
-    # metadata = df_signals[['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T']]
+    y = df_signals['Is_Leak']
+
+    metadata_cols = ['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T', 'Is_Leak']
+    metadata = df_signals[['Scenario_Name', 'leak_diameter_parameter', 'time_of_failure_h', 'leak_location', 'is_outlier', 'T']]
     
-    # unique_leaks = [x for x in df_signals['leak_diameter_parameter'].unique() if pd.notna(x)]
-    # eval_leak_diameters = ['All'] + unique_leaks
+    unique_leaks = [x for x in df_signals['leak_diameter_parameter'].unique() if pd.notna(x)]
+    eval_leak_diameters = ['All'] + unique_leaks
 
-    # X = df_signals.drop(columns=metadata_cols, errors='ignore')
+    X = df_signals.drop(columns=metadata_cols, errors='ignore')
 
     unique_scenarios = metadata['Scenario_Name'].unique()
     train_scenarios, test_scenarios = train_test_split(
@@ -320,7 +362,15 @@ def LightGBM_analysis_global():
         least_important_node = node_importance_df.sort_values(by=['Importance', 'Nodes'], ascending=[True, True]).iloc[0]['Nodes']
         unimportant_nodes_dropped.append(least_important_node)
 
-        decision_thresholds = [round(x * 0.1, 1) for x in range(1, 10)]
+        # decision_thresholds = [round(x * 0.1, 1) for x in range(1, 10)]
+        valid_thresholds = thresholds_roc[np.isfinite(thresholds_roc)]
+        if len(valid_thresholds) > 100:
+            idx = np.linspace(0, len(valid_thresholds) - 1, 100, dtype=int)
+            decision_thresholds = valid_thresholds[idx]
+        else:
+            decision_thresholds = valid_thresholds
+            
+        decision_thresholds = np.unique(np.append(decision_thresholds, [0.0, 1.0]))
 
         for eval_leak in eval_leak_diameters:
             
@@ -363,15 +413,15 @@ def LightGBM_analysis_global():
 
 import time
 
-start_time = time.time()
-LightGBM_analysis_global()
-t_global = time.time()
-LightGBM_analysis_all_nodes()
-t_all_nodes = time.time()
-LightGBM_analysis_best_nodes()
-t_best_nodes = time.time()
+# start_time = time.time()
+# LightGBM_analysis_global()
+# t_global = time.time()
+# LightGBM_analysis_all_nodes()
+# t_all_nodes = time.time()
+# LightGBM_analysis_best_nodes()
+# t_best_nodes = time.time()
 
-print('t_global: ', t_global - start_time)
-print('t_all_nodes: ', t_all_nodes - start_time)
-print('t_best_nodes: ', t_best_nodes - start_time)
+# print('t_global: ', t_global - start_time)
+# print('t_all_nodes: ', t_all_nodes - start_time)
+# print('t_best_nodes: ', t_best_nodes - start_time)
 

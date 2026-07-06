@@ -25,9 +25,9 @@ def load_all_data(base_dir: Path):
         'precision_recall_data_chama': 'precision_recall_data_chama.pkl',
         'precision_recall_data_chama_seperate': 'precision_recall_data_chama_seperate.pkl',
 
-        'cm_nn': 'confusion_matrix_df_nn.pkl',
-        'cm_xgb': 'confusion_matrix_df_xgb.pkl',
-        'cm_lgb': 'confusion_matrix_df_lgb.pkl',
+        # 'cm_nn': 'confusion_matrix_df_nn.pkl',
+        # 'cm_xgb': 'confusion_matrix_df_xgb.pkl',
+        # 'cm_lgb': 'confusion_matrix_df_lgb.pkl',
 
         'cm_best_nn': 'confusion_matrix_best_nodes_df_nn.pkl',
         'cm_best_xgb': 'confusion_matrix_best_nodes_df_xgb.pkl',
@@ -82,12 +82,12 @@ scenario_metadata = data['scenario_metadata']
 sensors_wn_dict = data['sensors_wn_dict']
 precision_recall_data_chama = data['precision_recall_data_chama']
 precision_recall_data_chama_seperate = data['precision_recall_data_chama_seperate']
-confusion_matrix_df_XGB = data['cm_xgb']
+# confusion_matrix_df_XGB = data['cm_xgb']
 confusion_matrix_best_nodes_df_XGB = data['cm_best_xgb']
-confusion_matrix_df_LGB = data['cm_lgb']
+# confusion_matrix_df_LGB = data['cm_lgb']
 confusion_matrix_best_nodes_df_LGB = data['cm_best_lgb']
 df_signals = data['signals']
-confusion_matrix_df = data['cm_nn']
+# confusion_matrix_df = data['cm_nn']
 confusion_matrix_best_nodes_df = data['cm_best_nn']
 nodal_thresholds_std = data['nodal_thresholds_std']
 best_nodes_nn = data['best_nodes_nn']
@@ -118,12 +118,15 @@ display_network_map(scenario_metadata, wn)
 
 display_Chama(chama_outputs_single, sensors_wn_dict, wn, precision_recall_data_chama, chama_outputs_seperate, precision_recall_data_chama_seperate)
 
-display_ml_results(confusion_matrix_df_XGB, confusion_matrix_best_nodes_df_XGB, wn, 'XGB', best_nodes_xgb, cm_global=cm_global_xgb, best_nodes_global=best_nodes_global_xgb)
+# display_ml_results(confusion_matrix_df_XGB, confusion_matrix_best_nodes_df_XGB, wn, 'XGB', best_nodes_xgb, cm_global=cm_global_xgb, best_nodes_global=best_nodes_global_xgb)
+display_ml_results(confusion_matrix_best_nodes_df_XGB, wn, 'XGB', best_nodes_xgb, cm_global=cm_global_xgb, best_nodes_global=best_nodes_global_xgb)
 
-display_ml_results(confusion_matrix_df_LGB, confusion_matrix_best_nodes_df_LGB, wn, 'LGB', best_nodes_gbm, cm_global=cm_global_lgb, best_nodes_global=best_nodes_global_lgb)
+# display_ml_results(confusion_matrix_df_LGB, confusion_matrix_best_nodes_df_LGB, wn, 'LGB', best_nodes_gbm, cm_global=cm_global_lgb, best_nodes_global=best_nodes_global_lgb)
+display_ml_results(confusion_matrix_best_nodes_df_LGB, wn, 'LGB', best_nodes_gbm, cm_global=cm_global_lgb, best_nodes_global=best_nodes_global_lgb)
 
 #display_ml_results(confusion_matrix_df, confusion_matrix_best_nodes_df, wn, 'Neural Networks', best_nodes_nn)
 
-display_ml_results(confusion_matrix_df, confusion_matrix_best_nodes_df, wn, 'Neural Networks', best_nodes_nn, cm_global=cm_global_nn, best_nodes_global=best_nodes_global_nn)
+# display_ml_results(confusion_matrix_df, confusion_matrix_best_nodes_df, wn, 'Neural Networks', best_nodes_nn, cm_global=cm_global_nn, best_nodes_global=best_nodes_global_nn)
+display_ml_results(confusion_matrix_best_nodes_df, wn, 'Neural Networks', best_nodes_nn, cm_global=cm_global_nn, best_nodes_global=best_nodes_global_nn)
 
 display_summary(df_global_summary, df_specific_summary)

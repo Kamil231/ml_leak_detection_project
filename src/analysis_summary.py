@@ -72,9 +72,9 @@ def load_and_standardize_data():
     return df_all[cols_to_keep]
 
 def calculate_metrics(group):
-
     group_sorted = group.sort_values(by='decision_threshold', ascending=True).copy()
-    group_sorted['TPR'] = group_sorted['TP'] / (group_sorted['TP'] + group_sorted['FN'] + 1e-9)
+    
+    group_sorted['TPR'] = group_sorted['TP'] / (group_sorted['TP'] + group_sorted['FN'] + 1e-9) # To jest nasz Recall
     group_sorted['FPR'] = group_sorted['FP'] / (group_sorted['FP'] + group_sorted['TN'] + 1e-9)
     group_sorted['Precision'] = group_sorted['TP'] / (group_sorted['TP'] + group_sorted['FP'] + 1e-9)
     group_sorted['F1'] = 2 * (group_sorted['Precision'] * group_sorted['TPR']) / (group_sorted['Precision'] + group_sorted['TPR'] + 1e-9)
@@ -83,12 +83,42 @@ def calculate_metrics(group):
     roc_points = sorted(zip(fpr_points, tpr_points))
     if roc_points and roc_points[0][0] != 0: roc_points.insert(0, (0.0, 0.0))
     if roc_points and roc_points[-1][0] != 1: roc_points.append((1.0, 1.0))
+    auc_roc_val = auc(*zip(*roc_points)) if len(roc_points) > 1 else 0.0
+
+    recall_points = group_sorted['TPR'].tolist()
+    precision_points = group_sorted['Precision'].tolist()
+    pr_points = sorted(zip(recall_points, precision_points)) 
     
-    auc_val = auc(*zip(*roc_points)) if len(roc_points) > 1 else 0.0
+    if pr_points and pr_points[0][0] != 0: 
+        pr_points.insert(0, (0.0, pr_points[0][1]))
+    
+    pr_auc_val = auc(*zip(*pr_points)) if len(pr_points) > 1 else 0.0
 
     max_f1 = group_sorted['F1'].max()
 
-    return pd.Series({'AUC_ROC': round(auc_val, 4), 'Max_F1': round(max_f1, 4)})
+    min_recall = 0.6
+    
+    valid_points = group_sorted[group_sorted['TPR'] >= min_recall].sort_values(by='TPR')
+    
+    if not valid_points.empty:
+        recalls = valid_points['TPR'].tolist()
+        precisions = valid_points['Precision'].tolist()
+        
+        if recalls[0] > min_recall:
+            recalls.insert(0, min_recall)
+            precisions.insert(0, precisions[0])
+            
+        raw_partial_auc = auc(recalls, precisions)
+        p_auc_06 = raw_partial_auc / (1.0 - min_recall) # Normalizacja (max 0.4)
+    else:
+        p_auc_06 = 0.0
+
+    return pd.Series({
+        'AUC_ROC': round(auc_roc_val, 4), 
+        'PR_AUC': round(pr_auc_val, 4), 
+        'Max_F1': round(max_f1, 4),
+        'Partial_PR_AUC_0.6': round(p_auc_06, 4)
+    })
 
 def generate_comparative_tables():
 
@@ -108,7 +138,7 @@ def generate_comparative_tables():
         pivot_uniwersalne = df_uniwersalne.pivot_table(
             index=['budget', 'leak_diameter_parameter'], 
             columns='Model', 
-            values=['AUC_ROC', 'Max_F1']
+            values=['AUC_ROC', 'PR_AUC', 'Max_F1', 'Partial_PR_AUC_0.6']
         )
         
         csv_path_uni = output_dir / 'global_models_table.csv'
@@ -124,7 +154,7 @@ def generate_comparative_tables():
         pivot_wycieki = df_wycieki.pivot_table(
             index=['budget', 'leak_diameter_parameter'], 
             columns='Model', 
-            values=['AUC_ROC', 'Max_F1']
+            values=['AUC_ROC', 'PR_AUC', 'Max_F1', 'Partial_PR_AUC_0.6']
         )
         
         csv_path_wyc = output_dir / 'seperate_leaks_models_table.csv'
@@ -134,4 +164,5 @@ def generate_comparative_tables():
         pivot_wycieki.to_pickle(pickle_output_uni)
 
 
-generate_comparative_tables()
+
+# generate_comparative_tables()
