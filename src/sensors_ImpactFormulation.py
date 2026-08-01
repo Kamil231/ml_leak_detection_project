@@ -98,3 +98,5 @@ def save_to_csv(det_times, min_det_time, scenario_characteristics, sensor_charac
     scenario_characteristics.to_csv(SIMULATION_CONFIG.output_folder + '/scenario_characteristics.csv')
     sensor_characteristics.to_csv(SIMULATION_CONFIG.output_folder + '/sensor_characteristics.csv')
     signal.to_csv(SIMULATION_CONFIG.output_folder + '/signal.csv')
+
+

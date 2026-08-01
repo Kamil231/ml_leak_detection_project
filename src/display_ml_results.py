@@ -164,70 +164,143 @@ def display_precision_recall_f1(unique_leaks, cm):
 		st.plotly_chart(fig_f1, use_container_width=True)
 
 def display_cm(cm, description):
-	with st.expander("Macierz Pomyłek (Confusion Matrix)"): 
+    with st.expander("Macierz Pomyłek (Confusion Matrix)"): 
 
-		col_params_cm, col_plots_cm = st.columns([1, 4], vertical_alignment="top")
+        col_params_cm, col_plots_cm = st.columns([1, 4], vertical_alignment="top")
 
-		with col_params_cm:
-		    st.markdown("### Filtry Macierzy")
+        with col_params_cm:
+            st.markdown("### Filtry Macierzy")
 
-		    unique_leaks_cm = sorted(
-		        cm['leak_diameter_parameter'].astype(str).unique(),
-		        key=lambda x: float(x) if x.replace('.', '', 1).isdigit() else float('inf')
-		    )
-		    selected_leak_cm = st.selectbox(
-		        "Wybierz Analizowany Wyciek", 
-		        options=unique_leaks_cm, 
-		        key=description+"_cm_leak"
-		    )
+            unique_leaks_cm = sorted(
+                cm['leak_diameter_parameter'].astype(str).unique(),
+                key=lambda x: float(x) if x.replace('.', '', 1).isdigit() else float('inf')
+            )
+            selected_leak_cm = st.selectbox(
+                "Wybierz Analizowany Wyciek", 
+                options=unique_leaks_cm, 
+                key=description+"_cm_leak"
+            )
+            
+            cm_filtered_by_leak = cm[cm['leak_diameter_parameter'].astype(str) == selected_leak_cm]
+            
+            unique_thp_cm = sorted(cm_filtered_by_leak['decision_threshold'].dropna().unique())
+            
+            if not unique_thp_cm:
+                unique_thp_cm = [0.0]
+                
+            default_index = len(unique_thp_cm) // 2
+
+            selected_thp_cm = st.selectbox(
+                "Wybierz Threshold (THP)", 
+                options=unique_thp_cm, 
+                index=default_index, 
+                format_func=lambda x: f"{x:.2f}", 
+                key=description+"_cm_thp"
+            )
+
+        filtered_cm_data = cm_filtered_by_leak[
+            cm_filtered_by_leak['decision_threshold'] == selected_thp_cm
+        ]
+
+        with col_plots_cm:
+            if filtered_cm_data.empty:
+                st.warning("Brak danych do wyświetlenia dla wybranych parametrów.")
+            else:
+
+                row = filtered_cm_data.iloc[0]
+                tp, fp = int(row['TP']), int(row['FP'])
+                tn, fn = int(row['TN']), int(row['FN'])
+
+                z_values = [[tn, fp], 
+                            [fn, tp]]
+                
+                x_labels = ['Przewidywany Szum (-)', 'Przewidywany Wyciek (+)']
+                y_labels = ['Faktyczny Szum (-)', 'Faktyczny Wyciek (+)']
+
+                fig_cm = px.imshow(
+                    z_values, 
+                    x=x_labels, 
+                    y=y_labels, 
+                    text_auto=True, 
+                    color_continuous_scale=[[0, 'white'], [1, 'white']], 
+                    title=f"Macierz Pomyłek (THP: {selected_thp_cm:.2f}, Wyciek: {selected_leak_cm})"
+                )
+                
+                fig_cm.update_traces(textfont=dict(color='black', size=14))
+
+                fig_cm.update_layout(
+                    xaxis_title="Decyzja Systemu (Algorytm)", 
+                    yaxis_title="Stan Rzeczywisty (Fizyka Sieci)",
+                    coloraxis_showscale=False
+                )
+
+                st.plotly_chart(fig_cm, use_container_width=True)
+
+# def display_cm(cm, description):
+# 	with st.expander("Macierz Pomyłek (Confusion Matrix)"): 
+
+# 		col_params_cm, col_plots_cm = st.columns([1, 4], vertical_alignment="top")
+
+# 		with col_params_cm:
+# 		    st.markdown("### Filtry Macierzy")
+
+# 		    unique_leaks_cm = sorted(
+# 		        cm['leak_diameter_parameter'].astype(str).unique(),
+# 		        key=lambda x: float(x) if x.replace('.', '', 1).isdigit() else float('inf')
+# 		    )
+# 		    selected_leak_cm = st.selectbox(
+# 		        "Wybierz Analizowany Wyciek", 
+# 		        options=unique_leaks_cm, 
+# 		        key=description+"_cm_leak"
+# 		    )
 		    
-		    unique_thp_cm = sorted(cm['decision_threshold'].dropna().unique())
-		    selected_thp_cm = st.selectbox(
-		        "Wybierz Threshold (THP)", 
-		        options=unique_thp_cm, 
-		        index=len(unique_thp_cm)//2, 
-		        format_func=lambda x: f"{x:.2f}", 
-		        key=description+"_cm_thp"
-		    )
+# 		    unique_thp_cm = sorted(cm['decision_threshold'].dropna().unique())
+# 		    selected_thp_cm = st.selectbox(
+# 		        "Wybierz Threshold (THP)", 
+# 		        options=unique_thp_cm, 
+# 		        index=len(unique_thp_cm)//2, 
+# 		        format_func=lambda x: f"{x:.2f}", 
+# 		        key=description+"_cm_thp"
+# 		    )
 
-		filtered_cm_data = cm[
-		    (cm['leak_diameter_parameter'].astype(str) == selected_leak_cm) &
-		    (cm['decision_threshold'] == selected_thp_cm)
-		]
+# 		filtered_cm_data = cm[
+# 		    (cm['leak_diameter_parameter'].astype(str) == selected_leak_cm) &
+# 		    (cm['decision_threshold'] == selected_thp_cm)
+# 		]
 
-		with col_plots_cm:
-		    if filtered_cm_data.empty:
-		        st.warning("Brak danych do wyświetlenia dla wybranych parametrów.")
-		    else:
-		        # Pobranie wartości TP, FP, TN, FN
-		        row = filtered_cm_data.iloc[0]
-		        tp, fp = int(row['TP']), int(row['FP'])
-		        tn, fn = int(row['TN']), int(row['FN'])
+# 		with col_plots_cm:
+# 		    if filtered_cm_data.empty:
+# 		        st.warning("Brak danych do wyświetlenia dla wybranych parametrów.")
+# 		    else:
+# 		        # Pobranie wartości TP, FP, TN, FN
+# 		        row = filtered_cm_data.iloc[0]
+# 		        tp, fp = int(row['TP']), int(row['FP'])
+# 		        tn, fn = int(row['TN']), int(row['FN'])
 
-		        z_values = [[tn, fp], 
-		                    [fn, tp]]
+# 		        z_values = [[tn, fp], 
+# 		                    [fn, tp]]
 		        
-		        x_labels = ['Przewidywany Szum (-)', 'Przewidywany Wyciek (+)']
-		        y_labels = ['Faktyczny Szum (-)', 'Faktyczny Wyciek (+)']
+# 		        x_labels = ['Przewidywany Szum (-)', 'Przewidywany Wyciek (+)']
+# 		        y_labels = ['Faktyczny Szum (-)', 'Faktyczny Wyciek (+)']
 
-		        fig_cm = px.imshow(
-		            z_values, 
-		            x=x_labels, 
-		            y=y_labels, 
-		            text_auto=True, 
-		            color_continuous_scale=[[0, 'white'], [1, 'white']], 
-		            title=f"Macierz Pomyłek (THP: {selected_thp_cm:.2f}, Wyciek: {selected_leak_cm})"
-		        )
+# 		        fig_cm = px.imshow(
+# 		            z_values, 
+# 		            x=x_labels, 
+# 		            y=y_labels, 
+# 		            text_auto=True, 
+# 		            color_continuous_scale=[[0, 'white'], [1, 'white']], 
+# 		            title=f"Macierz Pomyłek (THP: {selected_thp_cm:.2f}, Wyciek: {selected_leak_cm})"
+# 		        )
 		        
-		        fig_cm.update_traces(textfont=dict(color='black', size=14))
+# 		        fig_cm.update_traces(textfont=dict(color='black', size=14))
 
-		        fig_cm.update_layout(
-		            xaxis_title="Decyzja Systemu (Algorytm)", 
-		            yaxis_title="Stan Rzeczywisty (Fizyka Sieci)",
-		            coloraxis_showscale=False
-		        )
+# 		        fig_cm.update_layout(
+# 		            xaxis_title="Decyzja Systemu (Algorytm)", 
+# 		            yaxis_title="Stan Rzeczywisty (Fizyka Sieci)",
+# 		            coloraxis_showscale=False
+# 		        )
 
-		        st.plotly_chart(fig_cm, use_container_width=True)
+# 		        st.plotly_chart(fig_cm, use_container_width=True)
 
 def display_results_table(best_nodes, unique_leaks_dia, description, budget):
 
