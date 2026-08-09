@@ -132,7 +132,7 @@ def display_summary_plot(df_original, description):
                 fig.add_trace(
                     go.Scatter(
                         x=x_values, y=df_filtered[col_f1].tolist(), 
-                        name=f"{model} (Max F1)",
+                        name=f"{model} (Operating F1-Score)",
                         mode='lines+markers', 
                         line=dict(color=color, dash='dash', width=2.5)
                     ),
@@ -154,7 +154,7 @@ def display_summary_plot(df_original, description):
         )
 
         fig.update_yaxes(title_text="<b>AUC (ROC, PR, Partial PR)</b>", secondary_y=False, color="white", gridcolor='#262730', range=[-0.05, 1.05])
-        fig.update_yaxes(title_text="<b>Max F1 Score</b>", secondary_y=True, color="white", showgrid=False, range=[-0.05, 1.05])
+        fig.update_yaxes(title_text="<b>Operating F1 Score</b>", secondary_y=True, color="white", showgrid=False, range=[-0.05, 1.05])
 
         if use_budget_on_x and fixed_xaxis_budget:
             fig.update_xaxes(range=[0, 20])

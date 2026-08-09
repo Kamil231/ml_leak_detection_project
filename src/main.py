@@ -86,11 +86,11 @@ if __name__ == '__main__':
 
     # run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h)
 
-    # run_chama_simulation_parallel_seperate_leaks(leak_diameter_parameters, times_of_failure_h)
+    run_chama_simulation_parallel_seperate_leaks(leak_diameter_parameters, times_of_failure_h)
 
-    stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_failure_h, n_jobs=-1)
+    # stochastic_simulation_signals_parallel(leak_diameter_parameters, times_of_failure_h, n_jobs=-1)
 
-    get_signals_df()
+    # get_signals_df()
 
     # XGBoost_analysis_all_nodes()
 
@@ -98,37 +98,37 @@ if __name__ == '__main__':
 
     # XGBoost_analysis_global()
 
-    p_xgb = mp.Process(target=run_xgboost)
-    p_xgb.start()
-    p_xgb.join()
+    # p_xgb = mp.Process(target=run_xgboost)
+    # p_xgb.start()
+    # p_xgb.join()
 
     # LightGBM_analysis_all_nodes()
 
     # LightGBM_analysis_best_nodes()
 
     # LightGBM_analysis_global()
-    p_lgb = mp.Process(target=run_lightgbm)
-    p_lgb.start()
-    p_lgb.join()
+    # p_lgb = mp.Process(target=run_lightgbm)
+    # p_lgb.start()
+    # p_lgb.join()
 
     # nn_analysis_parallel()
     
     # NN_analysis_best_nodes()
 
     # nn_analysis_global()
-    p_nn = mp.Process(target=run_pytorch)
-    p_nn.start()
-    p_nn.join()
+    # p_nn = mp.Process(target=run_pytorch)
+    # p_nn.start()
+    # p_nn.join()
 
     generate_comparative_tables()
 
-    end_time = time.perf_counter()
+    # end_time = time.perf_counter()
 
-    elapsed_time = end_time - start_time
-    print(f"Czas wykonania: {elapsed_time:.4f} sekund")
+    # elapsed_time = end_time - start_time
+    # print(f"Czas wykonania: {elapsed_time:.4f} sekund")
 
-    with open(SIMULATION_CONFIG.output_folder / 'config.txt', 'w', encoding='utf-8') as f:
-        config_dict = asdict(SIMULATION_CONFIG)
-        yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
+    # with open(SIMULATION_CONFIG.output_folder / 'config.txt', 'w', encoding='utf-8') as f:
+    #     config_dict = asdict(SIMULATION_CONFIG)
+    #     yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
 
 

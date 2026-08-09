@@ -225,8 +225,14 @@ def run_chama_simulation_parallel_seperate_leaks(leak_diameter_parameters, times
     for ldp in leak_diameter_parameters:
         print(f"\nRozpoczynam optymalizację Chama dla średnicy wycieku: {ldp}")
 
+        # valid_scenarios = scenario_metadata[
+        #     (scenario_metadata['leak_diameter_parameter'] == ldp) & 
+        #     (scenario_metadata['is_outlier'] == False)
+        # ]['Scenario_Name'].tolist()
+
         valid_scenarios = scenario_metadata[
-            (scenario_metadata['leak_diameter_parameter'] == ldp) & 
+            ((scenario_metadata['leak_diameter_parameter'] == ldp) | 
+             (scenario_metadata['leak_diameter_parameter'].isna())) & 
             (scenario_metadata['is_outlier'] == False)
         ]['Scenario_Name'].tolist()
         

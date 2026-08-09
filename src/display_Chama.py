@@ -333,14 +333,26 @@ def display_Chama_single(chama_outputs, sensors_wn_dict, wn, precision_recall_da
 					fpr_points = group_sorted['FPR'].tolist()
 					tpr_points = group_sorted['TPR'].tolist()
 
+					# roc_points = sorted(zip(fpr_points, tpr_points))
+					
+					# if roc_points[0][0] != 0:
+					# 	roc_points.insert(0, (0.0, 0.0))
+					# if roc_points[-1][0] != 1:
+					# 	roc_points.append((1.0, 1.0))
+						
+					# x_auc, y_auc = zip(*roc_points)
+
+
+
 					roc_points = sorted(zip(fpr_points, tpr_points))
 					
 					if roc_points[0][0] != 0:
 						roc_points.insert(0, (0.0, 0.0))
-					if roc_points[-1][0] != 1:
-						roc_points.append((1.0, 1.0))
 						
 					x_auc, y_auc = zip(*roc_points)
+
+
+
 
 					calculated_auc = auc(x_auc, y_auc)
 					
@@ -426,25 +438,57 @@ def display_Chama_single(chama_outputs, sensors_wn_dict, wn, precision_recall_da
 				)
 
 				selected_form_cm = st.selectbox("Formulation", precision_recall_data['formulation'].unique(), key="cm_form")
-				
-				unique_thp_cm = sorted(precision_recall_data['thp'].dropna().unique())
-				selected_thp_cm = st.selectbox(
-					"Wybierz Threshold (THP)", 
-					unique_thp_cm, 
-					index=len(unique_thp_cm)//2, 
-					format_func=lambda x: f"{x:.2f}", 
-					key="cm_thp"
-				)
 
 				unique_leaks = precision_recall_data['leak_diameters'].unique()
 				selected_leak_cm = st.selectbox("Wybierz Analizowany Wyciek", unique_leaks, key="cm_leak")
 
-			filtered_cm_data = precision_recall_data[
-				(precision_recall_data['budget'] == selected_budget_cm) & 
-				(precision_recall_data['formulation'] == selected_form_cm) &
-				(precision_recall_data['thp'] == selected_thp_cm) &
-				(precision_recall_data['leak_diameters'] == selected_leak_cm)
-			]
+				cm_base = precision_recall_data[
+					(precision_recall_data['budget'] == selected_budget_cm) & 
+					(precision_recall_data['formulation'] == selected_form_cm)
+				].copy()
+
+				cm_filtered_by_leak = cm_base[cm_base['leak_diameters'].astype(str) == str(selected_leak_cm)].copy()
+				
+				unique_thp_cm = sorted(cm_filtered_by_leak['thp'].dropna().unique())
+				if not unique_thp_cm:
+					unique_thp_cm = [0.0]
+
+				# 1. Inicjalizujemy domyślną wartość w pamięci (tylko raz)
+				if "cm_thp" not in st.session_state:
+					st.session_state["cm_thp"] = unique_thp_cm[len(unique_thp_cm) // 2]
+
+				use_fpr_threshold = st.toggle("Ustaw próg dla FPR <= 0.05", value=False, key="cm_fpr_toggle_chama_single")
+
+				if use_fpr_threshold:
+					all_leaks_present = 'All' in cm_base['leak_diameters'].astype(str).unique()
+					
+					if all_leaks_present:
+						cm_for_thp = cm_base[cm_base['leak_diameters'].astype(str) == 'All'].copy()
+					else:
+						cm_for_thp = cm_filtered_by_leak.copy()
+
+					cm_for_thp['FPR'] = cm_for_thp['FP'] / (cm_for_thp['FP'] + cm_for_thp['TN'] + 1e-9)
+					cm_sorted = cm_for_thp.sort_values('thp', ascending=True)
+					valid_thps = cm_sorted[cm_sorted['FPR'] <= 0.05]
+					
+					if not valid_thps.empty:
+						auto_thp = valid_thps.iloc[0]['thp']
+					else:
+						auto_thp = cm_sorted.iloc[-1]['thp']
+						
+					# 2. Nadpisujemy pamięć, jeśli toggle jest włączony
+					st.session_state["cm_thp"] = auto_thp
+
+				# 3. ZMIANA: Znika parametr 'index', widget czyta tylko z 'key'
+				selected_thp_cm = st.selectbox(
+					"Wybierz Threshold (THP)", 
+					unique_thp_cm, 
+					format_func=lambda x: f"{x:.2f}", 
+					key="cm_thp",
+					disabled=use_fpr_threshold
+				)
+
+			filtered_cm_data = cm_filtered_by_leak[cm_filtered_by_leak['thp'] == selected_thp_cm]
 
 			with col_plots_cm:
 				if filtered_cm_data.empty:
@@ -717,15 +761,27 @@ def display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, pr
 						group = filtered_roc[filtered_roc['leak_diameters'].astype(str) == leak]
 						group_sorted = group.sort_values(by='thp', ascending=False)
 						
+						# fpr_points = group_sorted['FPR'].tolist()
+						# tpr_points = group_sorted['TPR'].tolist()
+						# roc_points = sorted(zip(fpr_points, tpr_points))
+						
+						# if roc_points and roc_points[0][0] != 0: roc_points.insert(0, (0.0, 0.0))
+						# if roc_points and roc_points[-1][0] != 1: roc_points.append((1.0, 1.0))
+						
+						# x_auc, y_auc = zip(*roc_points) if roc_points else ([], [])
+						# calculated_auc = auc(x_auc, y_auc) if roc_points else 0.0
+
+
 						fpr_points = group_sorted['FPR'].tolist()
 						tpr_points = group_sorted['TPR'].tolist()
 						roc_points = sorted(zip(fpr_points, tpr_points))
+
+						if roc_points and roc_points[0][0] != 0: 
+							roc_points.insert(0, (0.0, 0.0))
 						
-						if roc_points and roc_points[0][0] != 0: roc_points.insert(0, (0.0, 0.0))
-						if roc_points and roc_points[-1][0] != 1: roc_points.append((1.0, 1.0))
-						
-						x_auc, y_auc = zip(*roc_points) if roc_points else ([], [])
-						calculated_auc = auc(x_auc, y_auc) if roc_points else 0.0
+						x_auc, y_auc = zip(*roc_points) if len(roc_points) > 1 else ([], [])
+						calculated_auc = auc(x_auc, y_auc) if len(roc_points) > 1 else 0.0
+
 						
 						auc_results.append({
 							'Formulation': roc_form,
@@ -785,25 +841,48 @@ def display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, pr
 					key="cm_budget_seperate_seperate"
 				)
 				
-				cm_form = st.selectbox("Formulation", options=pr_forms_all, key="cm_form_seperate")
-				
-				unique_thp_cm = sorted(precision_recall_data['thp'].dropna().unique())
-				cm_thp = st.selectbox(
-					"Wybierz Threshold (THP)", 
-					unique_thp_cm, 
-					index=len(unique_thp_cm)//2, 
-					format_func=lambda x: f"{x:.2f}", 
-					key="cm_thp_seperate"
-				)
+				cm_form = st.selectbox("Formulation", options=pr_forms_all, key="cm_form_seperate_1")
 				
 				cm_ldp = st.selectbox("Wybierz Analizowany Wyciek", options=pr_leaks_all, key="cm_ldp_seperate_seperate")
 				
-			filtered_cm_data = precision_recall_data[
-				(precision_recall_data['budget'] == cm_budget) & 
-				(precision_recall_data['formulation'] == cm_form) &
-				(precision_recall_data['thp'] == cm_thp) &
-				(precision_recall_data['leak_diameters'] == str(cm_ldp))
-			]
+				cm_filtered = precision_recall_data[
+					(precision_recall_data['budget'] == cm_budget) & 
+					(precision_recall_data['formulation'] == cm_form) &
+					(precision_recall_data['leak_diameters'].astype(str) == str(cm_ldp))
+				].copy()
+
+				unique_thp_cm = sorted(cm_filtered['thp'].dropna().unique())
+				if not unique_thp_cm:
+					unique_thp_cm = [0.0]
+
+				# 1. Inicjalizujemy domyślną wartość w pamięci (tylko raz)
+				if "cm_thp_seperate" not in st.session_state:
+					st.session_state["cm_thp_seperate"] = unique_thp_cm[len(unique_thp_cm) // 2]
+
+				use_fpr_threshold = st.toggle("Ustaw próg dla FPR <= 0.05", value=False, key="cm_fpr_toggle_chama_sep")
+
+				if use_fpr_threshold:
+					cm_filtered['FPR'] = cm_filtered['FP'] / (cm_filtered['FP'] + cm_filtered['TN'] + 1e-9)
+					cm_sorted = cm_filtered.sort_values('thp', ascending=True)
+					valid_thps = cm_sorted[cm_sorted['FPR'] <= 0.05]
+					
+					if not valid_thps.empty:
+						auto_thp = valid_thps.iloc[0]['thp']
+					else:
+						auto_thp = cm_sorted.iloc[-1]['thp']
+
+					# 2. Nadpisujemy pamięć, jeśli toggle jest włączony
+					st.session_state["cm_thp_seperate"] = auto_thp
+
+				# 3. ZMIANA: Znika parametr 'index', widget czyta tylko z 'key'
+				cm_thp = st.selectbox(
+					"Wybierz Threshold (THP)", 
+					unique_thp_cm, 
+					format_func=lambda x: f"{x:.2f}", 
+					key="cm_thp_seperate",
+					disabled=use_fpr_threshold
+				)				
+			filtered_cm_data = cm_filtered[cm_filtered['thp'] == cm_thp]
 			
 			with col_plots_cm:
 				if not filtered_cm_data.empty:

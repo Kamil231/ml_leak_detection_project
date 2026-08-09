@@ -309,7 +309,11 @@ def get_precision_recall_leak_df_seperate(target_leak_diameter, leak_signals, no
 
     thp_list = np.arange(2, 5.25, 0.1).tolist()
     
-    leak_signals_filtered = leak_signals[leak_signals['leak_diameter_parameter'] == target_leak_diameter].copy()
+    # leak_signals_filtered = leak_signals[leak_signals['leak_diameter_parameter'] == target_leak_diameter].copy()
+    leak_signals_filtered = leak_signals[
+        (leak_signals['leak_diameter_parameter'] == target_leak_diameter) | 
+        (leak_signals['leak_diameter_parameter'].isna())
+    ].copy()
     
     if leak_signals_filtered.empty:
         return pd.DataFrame() 
