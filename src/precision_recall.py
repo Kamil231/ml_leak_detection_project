@@ -157,40 +157,40 @@ def get_precision_recall_leak_df(target_leak_diameters, leak_signals, nodal_thre
                 else:
                     FN += 1  
 
-                FP_bp_base = 0
-                TN_bp_base = 0
+            FP_bp_base = 0
+            TN_bp_base = 0
+            
+            for seed in range(len(precomputed_bp)):
+                if seed not in precomputed_bp: 
+                    continue
                 
-                for seed in range(len(precomputed_bp)):
-                    if seed not in precomputed_bp: 
+                bp_node_dict = precomputed_bp[seed]
+                system_alarmed_bp = False
+                
+                for sensor in sensors_list_tuple:
+                    node_id = str(sensor[0])
+                    if node_id not in bp_node_dict:
                         continue
-                    
-                    bp_node_dict = precomputed_bp[seed]
-                    system_alarmed_bp = False
-                    
-                    for sensor in sensors_list_tuple:
-                        node_id = str(sensor[0])
-                        if node_id not in bp_node_dict:
-                            continue
-                            
-                        sig_vals = bp_node_dict[node_id]
                         
-                        #threshold = thp * nodal_thresholds[node_id]
-                        m_node = nodal_thresholds.loc[node_id, 'mean']
-                        s_node = nodal_thresholds.loc[node_id, 'std']
-
-                        threshold = m_node + (thp * s_node)
-                        
-                        if (sig_vals >= threshold).any():
-                            system_alarmed_bp = True
-                            break 
+                    sig_vals = bp_node_dict[node_id]
                     
-                    if system_alarmed_bp:
-                        FP_bp_base += 1
-                    else:
-                        TN_bp_base += 1
+                    #threshold = thp * nodal_thresholds[node_id]
+                    m_node = nodal_thresholds.loc[node_id, 'mean']
+                    s_node = nodal_thresholds.loc[node_id, 'std']
 
-                FP += FP_bp_base
-                TN += TN_bp_base
+                    threshold = m_node + (thp * s_node)
+                    
+                    if (sig_vals >= threshold).any():
+                        system_alarmed_bp = True
+                        break 
+                
+                if system_alarmed_bp:
+                    FP_bp_base += 1
+                else:
+                    TN_bp_base += 1
+
+            FP += FP_bp_base
+            TN += TN_bp_base
 
             
             precision = TP / (TP + FP) if (TP + FP) > 0 else np.nan
@@ -309,11 +309,7 @@ def get_precision_recall_leak_df_seperate(target_leak_diameter, leak_signals, no
 
     thp_list = np.arange(2, 5.25, 0.1).tolist()
     
-    # leak_signals_filtered = leak_signals[leak_signals['leak_diameter_parameter'] == target_leak_diameter].copy()
-    leak_signals_filtered = leak_signals[
-        (leak_signals['leak_diameter_parameter'] == target_leak_diameter) | 
-        (leak_signals['leak_diameter_parameter'].isna())
-    ].copy()
+    leak_signals_filtered = leak_signals[leak_signals['leak_diameter_parameter'] == target_leak_diameter].copy()
     
     if leak_signals_filtered.empty:
         return pd.DataFrame() 

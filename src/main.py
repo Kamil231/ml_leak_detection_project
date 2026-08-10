@@ -84,7 +84,7 @@ if __name__ == '__main__':
     times_of_failure_h = [48]
     print('combination number: ', len(leak_diameter_parameters)*len(times_of_failure_h))
 
-    # run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h)
+    run_chama_simulation_parallel(leak_diameter_parameters, times_of_failure_h)
 
     run_chama_simulation_parallel_seperate_leaks(leak_diameter_parameters, times_of_failure_h)
 
