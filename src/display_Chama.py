@@ -456,19 +456,7 @@ def display_Chama_single(chama_outputs, sensors_wn_dict, wn, precision_recall_da
 				use_fpr_threshold = st.toggle("Ustaw próg dla FPR <= 0.05", value=False, key="cm_fpr_toggle_chama_single")
 
 				if use_fpr_threshold:
-					# Pobieramy dane TYLKO dla wybranego budżetu i formulacji
-					if 'All' in cm_base['leak_diameters'].astype(str).unique():
-						cm_for_thp = cm_base[
-							(cm_base['leak_diameters'].astype(str) == 'All') &
-							(cm_base['budget'] == selected_budget_cm) & 
-							(cm_base['formulation'] == selected_form_cm)  # <--- TUTAJ POPRAWKA
-						].copy()
-					else:
-						cm_for_thp = cm_filtered_by_leak[
-							(cm_filtered_by_leak['budget'] == selected_budget_cm) & 
-							(cm_filtered_by_leak['formulation'] == selected_form_cm)  # <--- TUTAJ POPRAWKA
-						].copy()
-
+					cm_for_thp = cm_filtered_by_leak.copy()
 					cm_for_thp['FPR'] = cm_for_thp['FP'] / (cm_for_thp['FP'] + cm_for_thp['TN'] + 1e-9)
 					cm_sorted = cm_for_thp.sort_values('thp', ascending=True)
 					valid_thps = cm_sorted[cm_sorted['FPR'] <= 0.05]
@@ -476,20 +464,13 @@ def display_Chama_single(chama_outputs, sensors_wn_dict, wn, precision_recall_da
 					if not valid_thps.empty:
 						auto_thp = valid_thps.iloc[0]['thp']
 					else:
-						# Fallback: jeśli nawet najwyższy próg nie daje 5%, bierzemy maksymalny dostępny
 						auto_thp = cm_sorted.iloc[-1]['thp'] if not cm_sorted.empty else unique_thp_cm[-1]
 						
 					closest_thp = min(unique_thp_cm, key=lambda x: abs(x - auto_thp))
-					auto_idx = unique_thp_cm.index(closest_thp)
-
-					selected_thp_cm = st.selectbox(
-						"Wybierz Threshold (THP)", 
-						unique_thp_cm, 
-						index=auto_idx,
-						format_func=lambda x: f"{x:.2f}", 
-						key="cm_thp_auto",
-						disabled=True
-					)
+					
+					# Wymuszamy wartość w Pythonie (Streamlit nie ma tu nic do gadania)
+					selected_thp_cm = closest_thp
+					st.text_input("Wybierz Threshold (THP)", value=f"{selected_thp_cm:.2f} (Auto: FPR <= 5%)", disabled=True)
 				else:
 					selected_thp_cm = st.selectbox(
 						"Wybierz Threshold (THP)", 
@@ -498,7 +479,6 @@ def display_Chama_single(chama_outputs, sensors_wn_dict, wn, precision_recall_da
 						format_func=lambda x: f"{x:.2f}", 
 						key="cm_thp_manual"
 					)
-
 
 
 			filtered_cm_data = cm_filtered_by_leak[cm_filtered_by_leak['thp'] == selected_thp_cm]
@@ -863,7 +843,7 @@ def display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, pr
 					(precision_recall_data['formulation'] == cm_form) &
 					(precision_recall_data['leak_diameters'].astype(str) == str(cm_ldp))
 				].copy()
-				
+
 
 				unique_thp_cm = sorted(cm_filtered['thp'].dropna().unique())
 				if not unique_thp_cm:
@@ -872,12 +852,7 @@ def display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, pr
 				use_fpr_threshold = st.toggle("Ustaw próg dla FPR <= 0.05", value=False, key="cm_fpr_toggle_chama_sep")
 
 				if use_fpr_threshold:
-					# Filtrujemy dokładnie do wybranego wskaźnika
-					cm_for_thp = cm_filtered[
-						(cm_filtered['budget'] == cm_budget) & 
-						(cm_filtered['formulation'] == cm_form)  # <--- TUTAJ POPRAWKA
-					].copy()
-
+					cm_for_thp = cm_filtered.copy()
 					cm_for_thp['FPR'] = cm_for_thp['FP'] / (cm_for_thp['FP'] + cm_for_thp['TN'] + 1e-9)
 					cm_sorted = cm_for_thp.sort_values('thp', ascending=True)
 					valid_thps = cm_sorted[cm_sorted['FPR'] <= 0.05]
@@ -888,16 +863,10 @@ def display_Chama_seperate_leaks(chama_outputs_seperate, sensors_wn_dict, wn, pr
 						auto_thp = cm_sorted.iloc[-1]['thp'] if not cm_sorted.empty else unique_thp_cm[-1]
 
 					closest_thp = min(unique_thp_cm, key=lambda x: abs(x - auto_thp))
-					auto_idx = unique_thp_cm.index(closest_thp)
-
-					cm_thp = st.selectbox(
-						"Wybierz Threshold (THP)", 
-						unique_thp_cm, 
-						index=auto_idx,
-						format_func=lambda x: f"{x:.2f}", 
-						key="cm_thp_sep_auto",
-						disabled=True
-					)
+					
+					# Wymuszamy wartość w Pythonie
+					cm_thp = closest_thp
+					st.text_input("Wybierz Threshold (THP)", value=f"{cm_thp:.2f} (Auto: FPR <= 5%)", disabled=True)
 				else:
 					cm_thp = st.selectbox(
 						"Wybierz Threshold (THP)", 
